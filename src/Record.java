@@ -1,7 +1,7 @@
 import java.util.ArrayList;
 import java.io.Serializable;
 
-public class Record  implements Serializable{
+public class Record implements Serializable{
     private long recordID;
     private String name;
     private ArrayList<Double> coor; //coordinates
