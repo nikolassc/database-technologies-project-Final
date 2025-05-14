@@ -4,7 +4,7 @@ import java.util.ArrayList;
 // An Entry refers to the address of a lower Node (child) in the RStarTree and to it's BoundingBox (it's covering rectangle),
 // which covers all the bounding boxes in the lower Node's Entries
 class Entry implements Serializable {
-    private BoundingBox boundingBox; // The closed bounded intervals describing the extent of the object along each dimension
+    private MBR MBR; // The closed bounded intervals describing the extent of the object along each dimension
     private Long childNodeBlockId; // The address (block ID) of a lower Node (child) in the RStarTree
 
     // Constructor which takes parameters the lower Node which represents the child node of the entry
@@ -14,17 +14,17 @@ class Entry implements Serializable {
     }
 
     // Constructor which takes parameters the lower Node which represents the child node of the entry
-    Entry(BoundingBox boundingBox)
+    Entry(MBR MBR)
     {
-        this.boundingBox = boundingBox;
+        this.MBR = MBR;
     }
 
     void setChildNodeBlockId(Long childNodeBlockId) {
         this.childNodeBlockId = childNodeBlockId;
     }
 
-    BoundingBox getBoundingBox() {
-        return boundingBox;
+    MBR getBoundingBox() {
+        return MBR;
     }
 
     Long getChildNodeBlockId() {
@@ -34,12 +34,12 @@ class Entry implements Serializable {
     // Adjusting the Bouncing Box of the entry by assigning a new bounding box to it with the new minimum bounds
     // based on the ArrayList parameter entries
     void adjustBBToFitEntries(ArrayList<Entry> entries){
-        boundingBox = new BoundingBox(Bounds.findMinimumBounds(entries));
+        MBR = new MBR(Bounds.findMinimumBounds(entries));
     }
 
     // Adjusting the Bouncing Box of the entry by assigning a new bounding box to it with the extended minimum bounds
     // that also enclose the given Entry parameter entryToInclude
     void adjustBBToFitEntry(Entry entryToInclude){
-        boundingBox = new BoundingBox(Bounds.findMinimumBounds(boundingBox,entryToInclude.getBoundingBox()));
+        MBR = new MBR(Bounds.findMinimumBounds(MBR,entryToInclude.getBoundingBox()));
     }
 }

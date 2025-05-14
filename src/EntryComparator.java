@@ -45,13 +45,13 @@ class EntryComparator {
         // Second value of the ArrayList is the area enlargement of the specific Entry
         private HashMap<Entry,ArrayList<Double>> entryComparisonMap;
 
-        EntryAreaEnlargementComparator(List<Entry> entriesToCompare, BoundingBox boundingBoxToAdd)
+        EntryAreaEnlargementComparator(List<Entry> entriesToCompare, MBR MBRToAdd)
         {
             // Initialising Hash-map
             this.entryComparisonMap = new HashMap<>();
             for (Entry entry : entriesToCompare)
             {
-                BoundingBox entryNewBB = new BoundingBox(Bounds.findMinimumBounds(entry.getBoundingBox(),boundingBoxToAdd));
+                MBR entryNewBB = new MBR(Bounds.findMinimumBounds(entry.getBoundingBox(), MBRToAdd));
                 ArrayList<Double> values = new ArrayList<>();
                 values.add(entry.getBoundingBox().getArea()); // First value of the ArrayList is the area of the bounding box
                 double areaEnlargement = entryNewBB.getArea() - entry.getBoundingBox().getArea();
@@ -78,16 +78,16 @@ class EntryComparator {
     // Class used to compare entries by their overlap enlargement of including a new "rectangle" item
     static class EntryOverlapEnlargementComparator implements Comparator<Entry>
     {
-        private BoundingBox boundingBoxToAdd; // The bounding box to add
+        private MBR MBRToAdd; // The bounding box to add
         private ArrayList<Entry> nodeEntries; // All the entries of the Node
 
         // Hash-map used for mapping the comparison value of the Entries during the compare method
         // Key of the hash-map is the given Entry
         // Value of the hash-map is the given Entry's overlap Enlargement
         private HashMap<Entry,Double> entryComparisonMap;
-        EntryOverlapEnlargementComparator(List<Entry> entriesToCompare, BoundingBox boundingBoxToAdd, ArrayList<Entry> nodeEntries)
+        EntryOverlapEnlargementComparator(List<Entry> entriesToCompare, MBR MBRToAdd, ArrayList<Entry> nodeEntries)
         {
-            this.boundingBoxToAdd = boundingBoxToAdd;
+            this.MBRToAdd = MBRToAdd;
             this.nodeEntries = nodeEntries;
 
             // Initialising Hash-map
@@ -95,7 +95,7 @@ class EntryComparator {
             for (Entry entry : entriesToCompare)
             {
                 double overlapEntry = calculateEntryOverlapValue(entry, entry.getBoundingBox());
-                Entry newEntry = new Entry(new BoundingBox(Bounds.findMinimumBounds(entry.getBoundingBox(),boundingBoxToAdd))); // The entry's bounding box after it includes the new bounding box
+                Entry newEntry = new Entry(new MBR(Bounds.findMinimumBounds(entry.getBoundingBox(), MBRToAdd))); // The entry's bounding box after it includes the new bounding box
                 double overlapNewEntry = calculateEntryOverlapValue(entry, newEntry.getBoundingBox()); // Using the previous entry signature in order to check for equality
                 double overlapEnlargementEntry = overlapNewEntry - overlapEntry ;
 
@@ -116,19 +116,19 @@ class EntryComparator {
             {   ArrayList<Entry> entriesToCompare = new ArrayList<>();
                 entriesToCompare.add(entryA);
                 entriesToCompare.add(entryB);
-                return new EntryAreaEnlargementComparator(entriesToCompare,boundingBoxToAdd).compare(entryA,entryB);
+                return new EntryAreaEnlargementComparator(entriesToCompare, MBRToAdd).compare(entryA,entryB);
             }
             else
                 return Double.compare(overlapEnlargementEntryA,overlapEnlargementEntryB);
         }
 
         // Calculates and returns the overlap value of the given entry with the other node entries
-        double calculateEntryOverlapValue(Entry entry, BoundingBox boundingBox){
+        double calculateEntryOverlapValue(Entry entry, MBR MBR){
             double sum = 0;
             for (Entry nodeEntry : nodeEntries)
             {
                 if (nodeEntry != entry)
-                    sum += BoundingBox.calculateOverlapValue(boundingBox,nodeEntry.getBoundingBox());
+                    sum += MBR.calculateOverlapValue(MBR,nodeEntry.getBoundingBox());
             }
             return sum;
         }
@@ -142,12 +142,12 @@ class EntryComparator {
         // Value of the hash-map is the given Entry's BoundingBox distance from the given BoundingBox
         private HashMap<Entry,Double> entryComparisonMap;
 
-        EntryDistanceFromCenterComparator(List<Entry>entriesToCompare, BoundingBox boundingBox) {
+        EntryDistanceFromCenterComparator(List<Entry>entriesToCompare, MBR MBR) {
             // Initialising Hash-map
             this.entryComparisonMap = new HashMap<>();
 
             for (Entry entry : entriesToCompare)
-                entryComparisonMap.put(entry,BoundingBox.findDistanceBetweenBoundingBoxes(entry.getBoundingBox(),boundingBox));
+                entryComparisonMap.put(entry, MBR.findDistanceBetweenBoundingBoxes(entry.getBoundingBox(), MBR));
         }
 
         public int compare(Entry entryA, Entry entryB)
