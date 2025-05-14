@@ -45,28 +45,45 @@ class FilesHandler {
     //Reads data from given file path
     //Reads block 0, for metadata
     // returns ArrayList<Integer> which includes the metadata in the given file
-    private static ArrayList<Integer> readMetaDataBlock(String pathToFile){
+    private static ArrayList<Integer> readMetaDataBlock(String pathToFile) {
         try {
-            RandomAccessFile raf = new RandomAccessFile(new File(pathToFile), "rw");
-            FileInputStream fis = new FileInputStream(raf.getFD());
-            BufferedInputStream bis = new BufferedInputStream(fis);
+            RandomAccessFile raf = new RandomAccessFile(new File(pathToFile), "r");
             byte[] block = new byte[BLOCK_SIZE];
-            if (bis.read(block) != BLOCK_SIZE) {
-                throw new Exception("Block size read was not " + BLOCK_SIZE + " bytes");
+
+            // Διαβάζει το πρώτο block (block 0) όπου βρίσκονται τα μεταδεδομένα
+            raf.seek(0);
+            int bytesRead = raf.read(block);
+            if (bytesRead != BLOCK_SIZE) {
+                throw new IOException("Could not read full metadata block (expected " + BLOCK_SIZE + ", got " + bytesRead + ")");
             }
 
-            byte[] metaDataSizeBytes = serialize(new Random().nextInt());
-            System.arraycopy(metaDataSizeBytes, 0, block, 0, metaDataSizeBytes.length);
+            // Δημιουργεί stream για ανάγνωση αντικειμένων από το block
+            ByteArrayInputStream bais = new ByteArrayInputStream(block);
+            ObjectInputStream ois = new ObjectInputStream(bais);
 
-            byte[] dataInBlock = new byte[(Integer) deserialize(metaDataSizeBytes)];
-            System.arraycopy(block, 0, dataInBlock, 0, dataInBlock.length);
+            // Πρώτα διαβάζουμε το μέγεθος των serialized metadata (π.χ. πόσα bytes έχουν τα metadata)
+            int metaDataSize = (Integer) ois.readObject();
 
-            return (ArrayList<Integer>) deserialize(dataInBlock);
-        }catch (Exception e){
+            // Διαβάζουμε το πραγματικό metadata array (π.χ. [dataDimensions, BLOCK_SIZE, totalBlocks...])
+            byte[] metadataBytes = new byte[metaDataSize];
+            int actuallyRead = bais.read(metadataBytes);
+            if (actuallyRead != metaDataSize) {
+                throw new IOException("Could not read full metadata content (expected " + metaDataSize + " bytes, got " + actuallyRead + ")");
+            }
+
+            // Απο-σειριοποιούμε σε ArrayList<Integer>
+            ObjectInputStream metadataStream = new ObjectInputStream(new ByteArrayInputStream(metadataBytes));
+            ArrayList<Integer> metadata = (ArrayList<Integer>) metadataStream.readObject();
+
+            // Επιστροφή των μεταδεδομένων
+            return metadata;
+
+        } catch (Exception e) {
             e.printStackTrace();
+            return null;
         }
-        return null;
     }
+
 
     //Updates metadata of given file
     //Saves current dataDimensions, block size and total blocks on metadata block of this file
