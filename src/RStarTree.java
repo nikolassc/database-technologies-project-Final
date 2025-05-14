@@ -35,6 +35,10 @@ public class RStarTree {
         return FilesHandler.readIndexFileBlock(ROOT_NODE_BLOCK_ID);
     }
 
+    static int getRootNodeBlockId(){
+        return ROOT_NODE_BLOCK_ID;
+    }
+
     static int getLeafLevel(){
         return LEAF_LEVEL;
     }
@@ -43,9 +47,66 @@ public class RStarTree {
         ArrayList<Bounds> boundsForDimensions = new ArrayList<>();
 
         for (int i = 0; i < FilesHandler.getDataDimensions(); i++) {
-            boundsForDimensions.add(new Bounds(record.getCoordinate(i), record.getCoordinate(i) ));
+            boundsForDimensions.add(new Bounds(record.getCoordinateFromDimension(i), record.getCoordinateFromDimension(i)));
         }
+        levelsInserted = new boolean[totalLevels];
+        insert(null, null, new LeafEntry(record.getId(), datafileBlockId, bonusForDimensions), LEAF_LEVEL);
+
     }
+
+    private Entry insert(Node parentNode, Entry parentEntry, Entry dataEntry, int levelToAdd) {
+        long nodeBlockId = (parentEntry == null) ? ROOT_NODE_BLOCK_ID : parentEntry.getChildNodeBlockId();
+
+        if (parentEntry != null) {
+            parentEntry.adjustBBToFitEntry(dataEntry);
+            FilesHandler.updateIndexFileBlock(parentNode, totalLevels);
+        }
+
+        Node childNode = FilesHandler.readIndexFileBlock(nodeBlockId);
+        if (childNode == null) {
+            throw new IllegalStateException("The Node-block read from file is null");
+        }
+
+        // Case: Target level reached -> insert directly into this node
+        if (childNode.getNodeLevelInTree() == levelToAdd) {
+            childNode.insertEntry(dataEntry);
+            FilesHandler.updateIndexFileBlock(childNode, totalLevels);
+        }
+        // Case: Recurse further down the tree
+        else {
+            Entry bestEntry = chooseSubTree(childNode, dataEntry.getBoundingBox(), levelToAdd);
+            Entry newEntry = insert(childNode, bestEntry, dataEntry, levelToAdd);
+
+            // Read updated child node again in case it was modified during recursion
+            childNode = FilesHandler.readIndexFileBlock(nodeBlockId);
+            if (childNode == null) {
+                throw new IllegalStateException("The Node-block read from file is null after recursion");
+            }
+
+            if (newEntry != null) {
+                childNode.insertEntry(newEntry);
+            }
+
+            FilesHandler.updateIndexFileBlock(childNode, totalLevels);
+
+            // No further overflow, return nothing
+            if (childNode.getEntries().size() <= Node.getMaxEntriesInNode()) {
+                return null;
+            }
+
+            // Overflow treatment needed
+            return overFlowTreatment(parentNode, parentEntry, childNode);
+        }
+
+        // Final overflow check (leaf case)
+        if (childNode.getEntries().size() > Node.getMaxEntriesInNode()) {
+            return overFlowTreatment(parentNode, parentEntry, childNode);
+        }
+
+        return null;
+    }
+
+
 
 
 }
