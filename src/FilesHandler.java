@@ -349,11 +349,11 @@ class FilesHandler {
             System.arraycopy(nodeInBytes, 0, block, goodPutLengthInBytes.length, nodeInBytes.length);
 
             RandomAccessFile f = new RandomAccessFile(new File(PATH_TO_INDEXFILE), "rw");
-            f.seek(node.getBlockId()*BLOCK_SIZE); // this basically reads n bytes in the file
+            f.seek(node.getNodeBlockId()*BLOCK_SIZE); // this basically reads n bytes in the file
             f.write(block);
             f.close();
 
-            if (node.getBlockId() == RStarTree.getRootNodeBlockId() && FilesHelper.totalLevelsOfTreeIndex != totalLevelsOfTreeIndex)
+            if (node.getNodeBlockId() == RStarTree.getRootNodeBlockId() && FilesHandler.totalLevelsOfTreeIndex != totalLevelsOfTreeIndex)
                 updateLevelsOfTreeIndexFile();
 
         } catch (Exception e) {

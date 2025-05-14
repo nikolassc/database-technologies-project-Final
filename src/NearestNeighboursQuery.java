@@ -1,9 +1,8 @@
-import javax.management.Query;
 import java.util.*;
 
 // Class used for executing a k-nearest neighbours query of a specific search point with the use of the RStarTree
 // Finds the k closest records of that search point
-class NearestNeighboursQuery extends Query {
+class NearestNeighboursQuery{
     private ArrayList<Double> searchPoint; // The coordinates of point used for radius queries
     private double searchPointRadius; // The reference radius that is used as a bound
     private int k; // The number of nearest neighbours to be found
@@ -21,7 +20,6 @@ class NearestNeighboursQuery extends Query {
     }
 
     // Returns the ids of the query's records
-    @Override
     ArrayList<Long> getQueryRecordIds(Node node) {
         ArrayList<Long> qualifyingRecordIds = new ArrayList<>();
         findNeighbours(node);

@@ -9,7 +9,7 @@ class Entry implements Serializable {
 
     // Constructor which takes parameters the lower Node which represents the child node of the entry
     Entry(Node childNode) {
-        this.childNodeBlockId = childNode.getBlockId();
+        this.childNodeBlockId = childNode.getNodeBlockId();
         adjustBBToFitEntries(childNode.getEntries()); // Adjusting the BoundingBox of the Entry to fit the objects of the childNode
     }
 
