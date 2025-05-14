@@ -17,7 +17,7 @@ public class KNNCLIExample {
             coords.add(scanner.nextDouble());
         }
 
-        Point query = new Point(coords.stream().mapToDouble(Double::doubleValue).toArray());
+        Point query = new Point(coords);
 
         System.out.print("Δώσε πόσα k-nearest θέλεις: ");
         int k = scanner.nextInt();
