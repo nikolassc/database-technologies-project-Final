@@ -12,7 +12,7 @@ public class Records {
     }
 
     // Setters
-    public void setRecrordID(String recordID){
+    public void setRecordID(String recordID){
         this.recordID = recordID;
     }
 
@@ -25,7 +25,7 @@ public class Records {
     }
 
     // Getters
-    public String getRecrordID(){
+    public String getRecordID(){
         return  recordID;
     }
 
