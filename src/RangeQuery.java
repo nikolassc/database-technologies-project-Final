@@ -3,16 +3,22 @@ import java.util.List;
 
 public class RangeQuery {
 
+    /**
+     * Executes a range query using the R*-Tree structure, starting from the given node.
+     * Traverses the index file (indexfile.dat) to find relevant data blocks in the data file.
+     */
     public static List<Record> rangeQuery(Node node, double[] minCoor, double[] maxCoor) {
         List<Record> results = new ArrayList<>();
 
-        // Creats BoundixBox for the query
+        // Create the query MBR (bounding box)
         MBR queryBox = new MBR(getBoundsFromMinMax(minCoor, maxCoor));
 
         for (Entry entry : node.getEntries()) {
+            // If entry's bounding box overlaps with the query box
             if (MBR.checkOverlap(entry.getBoundingBox(), queryBox)) {
+
                 if (node.getNodeLevelInTree() == 0) {
-                    // If we are on a leaf, read the records from the data block
+                    // Leaf node: retrieve records from the associated data block
                     ArrayList<Record> records = FilesHandler.readDataFileBlock(entry.getChildNodeBlockId());
                     if (records != null) {
                         for (Record record : records) {
@@ -22,7 +28,7 @@ public class RangeQuery {
                         }
                     }
                 } else {
-                    // We are o a node, we go to the child node
+                    // Internal node: go deeper into the index file
                     Node childNode = FilesHandler.readIndexFileBlock(entry.getChildNodeBlockId());
                     if (childNode != null) {
                         results.addAll(rangeQuery(childNode, minCoor, maxCoor));
@@ -34,7 +40,9 @@ public class RangeQuery {
         return results;
     }
 
-    // Creates MBR for the query range
+    /**
+     * Builds a list of Bounds from given min/max arrays for each dimension.
+     */
     private static ArrayList<Bounds> getBoundsFromMinMax(double[] minCoor, double[] maxCoor) {
         ArrayList<Bounds> bounds = new ArrayList<>();
         for (int i = 0; i < minCoor.length; i++) {
@@ -43,7 +51,9 @@ public class RangeQuery {
         return bounds;
     }
 
-    // Checks if a Record is in boundaries
+    /**
+     * Checks whether a record lies within the query range.
+     */
     private static boolean isRecordInRange(Record record, double[] minCoor, double[] maxCoor) {
         ArrayList<Double> coords = record.getCoordinates();
         for (int i = 0; i < coords.size(); i++) {
@@ -53,6 +63,4 @@ public class RangeQuery {
         }
         return true;
     }
-
 }
-

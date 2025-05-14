@@ -42,19 +42,5 @@ public class Main {
             e.printStackTrace();
         }
 
-        // Range Query
-        if (block != null) {
-            double[] min = {9.5, 19.5, 4.5};
-            double[] max = {11.5, 21.5, 6.0};
-
-            List<Record> result = LinearRangeQuery.runLinearQuery(block, min, max);
-
-            System.out.println("Range query found " + result.size() + " results:");
-            for (Record rec : result) {
-                System.out.println(rec);
-            }
-        } else {
-            System.out.println("Block was not initialized.");
-        }
     }
 }
