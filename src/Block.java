@@ -45,7 +45,7 @@ public class Block {
         dos.writeInt(recordlist.size()); // writes the list size
 
         for(Records rec : recordlist){
-            dos.writeUTF(rec.getRecrordID()); // writes the recordId
+            dos.writeUTF(rec.getRecordID()); // writes the recordId
             dos.writeUTF(rec.getName()); // writes the record name
 
             double[] coords = rec.getCoordinates();
