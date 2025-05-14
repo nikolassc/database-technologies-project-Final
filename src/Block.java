@@ -4,7 +4,7 @@ import java.util.List;
 
 public class Block {
     private int blockID;
-    private List<Records> recordlist;
+    private List<Record> recordlist;
 
     // Constructor
     public Block(int blockID){
@@ -17,17 +17,17 @@ public class Block {
         return blockID;
     }
 
-    public List<Records> getRecordlist(){
+    public List<Record> getRecordlist(){
         return recordlist;
     }
 
     // Add a record to the block
-    public void addRecord(Records rec){
+    public void addRecord(Record rec){
         recordlist.add(rec);
     }
 
     // Get a record by index
-    public Records getRecord(int i){
+    public Record getRecord(int i){
         return recordlist.get(i);
     }
 
@@ -44,12 +44,12 @@ public class Block {
         dos.writeInt(blockID); // writes the blockId
         dos.writeInt(recordlist.size()); // writes the list size
 
-        for(Records rec : recordlist){
-            dos.writeUTF(rec.getRecrordID()); // writes the recordId
+        for(Record rec : recordlist){
+            dos.writeLong(rec.getRecordID()); // writes the recordId
             dos.writeUTF(rec.getName()); // writes the record name
 
-            double[] coords = rec.getCoordinates();
-            dos.writeInt(coords.length);
+            ArrayList<Double> coords = rec.getCoordinates();
+            dos.writeInt(coords.size());
             for(double c : coords){
                 dos.writeDouble(c); // writes the coordinates for any dimension
             }
@@ -74,16 +74,16 @@ public class Block {
         int numRecords = dis.readInt();
 
         for(int i=0; i<numRecords; i++){
-            String id = dis.readUTF();
+            long id = dis.readLong();
             String name = dis.readUTF();
 
             int dim = dis.readInt();
-            double[] coords = new double[dim];
-            for(int j=0; j<dim; j++){
-                coords[j] = dis.readDouble();
+            ArrayList<Double> coords = new ArrayList<>(dim);
+            while(dis.available()>0){
+                coords.add(dis.readDouble());
             }
 
-            block.addRecord(new Records(id, name, coords));
+            block.addRecord(new Record(id, name, coords));
         }
         return block;
     }
