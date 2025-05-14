@@ -7,10 +7,10 @@ public class RangeQuery {
         List<Record> results = new ArrayList<>();
 
         // Creats BoundixBox for the query
-        BoundingBox queryBox = new BoundingBox(getBoundsFromMinMax(minCoor, maxCoor));
+        MBR queryBox = new MBR(getBoundsFromMinMax(minCoor, maxCoor));
 
         for (Entry entry : node.getEntries()) {
-            if (BoundingBox.checkOverlap(entry.getBoundingBox(), queryBox)) {
+            if (MBR.checkOverlap(entry.getBoundingBox(), queryBox)) {
                 if (node.getNodeLevelInTree() == 0) {
                     // If we are on a leaf, read the records from the data block
                     ArrayList<Record> records = FilesHandler.readDataFileBlock(entry.getChildNodeBlockId());
@@ -34,7 +34,7 @@ public class RangeQuery {
         return results;
     }
 
-    // Creates BoundingBox for the query range
+    // Creates MBR for the query range
     private static ArrayList<Bounds> getBoundsFromMinMax(double[] minCoor, double[] maxCoor) {
         ArrayList<Bounds> bounds = new ArrayList<>();
         for (int i = 0; i < minCoor.length; i++) {
