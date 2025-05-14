@@ -387,5 +387,8 @@ class RStarTree {
         for (Entry entry : removedEntries)
             insert(null,null,entry,childNode.getLevel());
     }
+    TODO IMPLEMENT DELETE
+    TODO SKYLINE QUERY
+    TODO BULK LOADING
 
      */
