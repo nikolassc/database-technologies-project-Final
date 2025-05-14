@@ -1,5 +1,3 @@
-import org.w3c.dom.Node;
-
 import javax.management.Query;
 import java.util.*;
 
@@ -41,7 +39,7 @@ class NearestNeighboursQuery extends Query {
     private void findNeighbours(Node node) {
         node.getEntries().sort(new EntryComparator.EntryDistanceFromPointComparator(node.getEntries(),searchPoint));
         int i = 0;
-        if (node.getLevel() != RStarTree.getLeafLevel()) {
+        if (node.getNodeLevelInTree() != RStarTree.getLeafLevel()) {
             while (i < node.getEntries().size() && (nearestNeighbours.size() < k || node.getEntries().get(i).getBoundingBox().findMinDistanceFromPoint(searchPoint) <= searchPointRadius))
             {
                 findNeighbours(FilesHandler.readIndexFileBlock(node.getEntries().get(i).getChildNodeBlockId()));
