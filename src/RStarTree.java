@@ -1,8 +1,8 @@
-/*import java.util.ArrayList;
+import java.util.ArrayList;
 import java.util.Collections;
 
 class RStarTree {
-
+    /*
     private int totalLevels; // The total levels of the tree, increasing the size starting of the root, the root (top level) will always have the highest level
     private boolean[] levelsInserted; // Used for information on  which levels have already called overFlowTreatment on a data insertion procedure
     private static final int ROOT_NODE_BLOCK_ID = 1; // Root node will always have 1 as it's ID, in order to identify which block has the root Node
@@ -386,4 +386,6 @@ class RStarTree {
         for (Entry entry : removedEntries)
             insert(null,null,entry,childNode.getLevel());
     }
-} */
+
+     */
+}
