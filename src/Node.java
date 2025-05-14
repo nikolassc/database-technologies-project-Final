@@ -3,9 +3,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 
-public class Node implements Serializable{
+public class Node implements Serializable {
     private static final int MAX_ENTRIES = FilesHandler.calculateMaxEntriesInNode(); // Max entries that fit in a Node
-    private static final int MIN_ENTRIES = (int)(0.5 * MAX_ENTRIES); // Every node fills to 50%
+    private static final int MIN_ENTRIES = (int) (0.5 * MAX_ENTRIES); // Every node fills to 50%
     private int nodeLevelInTree; // The level in tree that the nods is
     private long nodeBlockId; // The id of the file block that contains this node
     private ArrayList<Entry> entries; // The entries in the Node
@@ -148,6 +148,7 @@ public class Node implements Serializable{
         result.add(new Node(nodeLevelInTree, best.getSecondGroup().getEntries()));
         return result;
     }
+}
 
 
 
