@@ -34,8 +34,10 @@ public class Record  implements Serializable{
         return  name;
     }
 
-    public ArrayList<Double> getCoordinates(){
-        return  coor;
+    public ArrayList<Double> getCoordinates() { return coor;}
+
+    public double getCoordinateFromDimension(int dimension){
+        return  coor.get(dimension);
     }
 
     // Custom output for the records
