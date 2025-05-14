@@ -1,4 +1,6 @@
 import java.io.*;
+import java.util.ArrayList;
+import java.util.List;
 
 public class Main {
     public static void main(String[] args) {
@@ -19,7 +21,6 @@ public class Main {
             block = new Block(1);
             block.addRecord(cafe);
             block.addRecord(museum);
-            block.addRecord(university);
 
             // 3. Convert to bytes
             byte[] bytes = block.toBytes();
@@ -46,10 +47,10 @@ public class Main {
             double[] min = {9.5, 19.5, 4.5};
             double[] max = {11.5, 21.5, 6.0};
 
-            List<Records> result = LinearRangeQuery.runLinearQuery(block, min, max);
+            List<Record> result = LinearRangeQuery.runLinearQuery(block, min, max);
 
             System.out.println("Range query found " + result.size() + " results:");
-            for (Records rec : result) {
+            for (Record rec : result) {
                 System.out.println(rec);
             }
         } else {

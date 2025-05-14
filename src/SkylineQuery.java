@@ -1,17 +1,17 @@
 import java.util.*;
 
 public class SkylineQuery {
-    static boolean dominates(Records r1, Records r2){
+    static boolean dominates(Record r1, Record r2){
         boolean strictlyLess = false;
 
-        double[] coords1 = r1.getCoordinates();
-        double[] coords2 = r2.getCoordinates();
+        ArrayList<Double> coords1 = r1.getCoordinates();
+        ArrayList<Double> coords2 = r2.getCoordinates();
 
-        for (int i=0; i<coords1.length; i++){
-            if (coords1[i] > coords2[i]){
+        for (int i=0; i<coords1.size(); i++){
+            if (coords1.get(i) > coords2.get(i)){
                 return false;
             }
-            else if (coords1[i] < coords2[i]) {
+            else if (coords1.get(i) < coords2.get(i)) {
                 strictlyLess = true;
             }
         }
@@ -19,12 +19,12 @@ public class SkylineQuery {
         return strictlyLess;
     }
 
-    static ArrayList<Records> merge(ArrayList<Records> left, ArrayList<Records> right){
-        ArrayList<Records> result = new ArrayList<>(left);
+    static ArrayList<Record> merge(ArrayList<Record> left, ArrayList<Record> right){
+        ArrayList<Record> result = new ArrayList<>(left);
 
-        for (Records r: right){
+        for (Record r: right){
             boolean dominated = false;
-            for (Records l: left){
+            for (Record l: left){
                 if (dominates(l,r)){
                     dominated = true;
                     break;
@@ -38,14 +38,14 @@ public class SkylineQuery {
         return result;
     }
 
-    static ArrayList<Records> divideAndConquer(ArrayList<Records> records){
+    static ArrayList<Record> divideAndConquer(ArrayList<Record> records){
         if (records.size() <= 1){
             return records;
         }
 
         int mid = records.size()/2;
-        ArrayList<Records> leftHalf = divideAndConquer((ArrayList<Records>) records.subList(0,mid));
-        ArrayList<Records> rightHalf = divideAndConquer((ArrayList<Records>) records.subList(mid,records.size()));
+        ArrayList<Record> leftHalf = divideAndConquer((ArrayList<Record>) records.subList(0,mid));
+        ArrayList<Record> rightHalf = divideAndConquer((ArrayList<Record>) records.subList(mid,records.size()));
         return merge(leftHalf, rightHalf);
     }
 }

@@ -1,9 +1,11 @@
 package rstartree.geometry;
 
+import java.util.ArrayList;
+
 public class Point {
     private final double[] coords;
 
-    public Point(double[] coords) {
+    public Point(ArrayList<Double> coords) {
         this.coords = coords.clone();
     }
 

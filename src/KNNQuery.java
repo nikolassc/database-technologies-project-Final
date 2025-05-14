@@ -6,9 +6,9 @@ public class KNNQuery {
 
     public static class Entry {
         public Point point;
-        public Records record;
+        public Record record;
 
-        public Entry(Records record) {
+        public Entry(Record record) {
             this.record = record;
             this.point = new Point(record.getCoordinates());
         }
@@ -27,7 +27,7 @@ public class KNNQuery {
         }
     }
 
-    public static List<Records> kNearestNeighbors(Node root, Point query, int k) {
+    public static List<Record> kNearestNeighbors(Node root, Point query, int k) {
         PriorityQueue<Object[]> queue = new PriorityQueue<>(Comparator.comparingDouble(a -> (Double) a[0]));
         PriorityQueue<Object[]> results = new PriorityQueue<>(Comparator.comparingDouble(a -> -(Double) a[0]));
 
@@ -57,9 +57,9 @@ public class KNNQuery {
             }
         }
 
-        List<Records> knn = new ArrayList<>();
+        List<Record> knn = new ArrayList<>();
         while (!results.isEmpty()) {
-            knn.add((Records) results.poll()[1]);
+            knn.add((Record) results.poll()[1]);
         }
         Collections.reverse(knn);
         return knn;
