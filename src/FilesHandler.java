@@ -52,7 +52,7 @@ class FilesHandler {
             BufferedInputStream bis = new BufferedInputStream(fis);
             byte[] block = new byte[BLOCK_SIZE];
             if (bis.read(block) != BLOCK_SIZE) {
-                throw new IllegalStateException("Block size read was not " + BLOCK_SIZE + " bytes");
+                throw new Exception("Block size read was not " + BLOCK_SIZE + " bytes");
             }
 
             byte[] metaDataSizeBytes = serialize(new Random().nextInt());
@@ -153,7 +153,7 @@ class FilesHandler {
             byte[] block = new byte[BLOCK_SIZE];
 
             if(bis.read(block,0,BLOCK_SIZE) != BLOCK_SIZE)
-                throw new IllegalStateException("Block size read was not " + BLOCK_SIZE + " bytes");
+                throw new Exception("Block size read was not " + BLOCK_SIZE + " bytes");
             byte[] metaDataLengthInBytes = serialize(new Random().nextInt());
             System.arraycopy(block, 0, block, metaDataLengthInBytes.length, metaDataLengthInBytes.length);
 
@@ -177,22 +177,22 @@ class FilesHandler {
             if(!newDataFile && Files.exists(Paths.get(PATH_TO_DATAFILE))){
                 ArrayList<Integer> dataFileMetaData = readMetaDataBlock(PATH_TO_DATAFILE);
                 if(dataFileMetaData == null)
-                    throw new IllegalStateException("Could not read datafile's MetaData block");
+                    throw new Exception("Could not read datafile's MetaData block");
                 FilesHandler.dataDimensions = dataFileMetaData.get(0);
                 if(FilesHandler.dataDimensions <= 0)
-                    throw new IllegalStateException("Data dimensions must be greater than 0");
+                    throw new Exception("Data dimensions must be greater than 0");
                 if(dataFileMetaData.get(1) != BLOCK_SIZE)
-                    throw new IllegalStateException("Block size read was not " + BLOCK_SIZE + " bytes");
+                    throw new Exception("Block size read was not " + BLOCK_SIZE + " bytes");
                 totalBlocksInDataFile = dataFileMetaData.get(2);
                 if (totalBlocksInDataFile < 0)
-                    throw new IllegalStateException("Total blocks in data file must be greater than 0");
+                    throw new Exception("Total blocks in data file must be greater than 0");
             }
             // Else initializes a new datafile
             else {
                 Files.deleteIfExists(Paths.get(PATH_TO_DATAFILE));
                 FilesHandler.dataDimensions = dataDimensions;
                 if (FilesHandler.dataDimensions <= 0)
-                    throw new IllegalStateException("Data dimensions must be greater than 0");
+                    throw new Exception("Data dimensions must be greater than 0");
                 updateMetaDataBlock(PATH_TO_DATAFILE);
                 ArrayList<Record> blockRecords = new ArrayList<>();
                 BufferedReader csvReader = new BufferedReader(new FileReader(PATH_TO_CSV));
@@ -212,6 +212,178 @@ class FilesHandler {
         } catch (Exception e){
             e.printStackTrace();
         }
+    }
+
+
+    //--------------------------------------------- INDEX FILE METHODS -------------------------------------------------
+
+    static int getTotalBlocksInIndexFile() {
+        return totalBlocksInIndexFile;
+    }
+
+    static int getTotalLevelsFile() {
+        return totalLevelsOfTreeIndex;
+    }
+
+    static int calculateMaxEntriesInNode() {
+        ArrayList<Entry> entriesInNode = new ArrayList<>();
+        int i = 0;
+        final int SAFETY_THRESHOLD = 5000;
+
+        while(i < SAFETY_THRESHOLD){
+            ArrayList<Bounds> boundsForEachDimension = new ArrayList<>();
+            for(int j=0; j < FilesHandler.dataDimensions; j++){
+                boundsForEachDimension.add(new Bounds(0.0, 0.0));
+            }
+
+            Entry entry = new LeafEntry(0L, 0L, boundsForEachDimension);
+            entry.setChildNodeBlockId(0L);
+            entriesInNode.add(entry);
+            i++;
+
+            try{
+                byte[] nodeInBytes = serialize(new Node(0, entriesInNode));
+                byte[] metaDataLengthInBytes = serialize(entriesInNode.size());
+                if (metaDataLengthInBytes.length + nodeInBytes.length > BLOCK_SIZE){
+                    break;
+                }
+            } catch (IOException e){
+                e.printStackTrace();
+                break;
+            }
+        }
+        return i-1;
+    }
+
+    //updates the metadata block of the indexfile with increased level of tree and other details
+
+    private static void updateLevelsOfTreeIndexFile() {
+        try{
+            ArrayList<Integer> indexFileMetaData = new ArrayList<>();
+            indexFileMetaData.add(dataDimensions);
+            indexFileMetaData.add(BLOCK_SIZE);
+            indexFileMetaData.add(totalBlocksInIndexFile);
+            indexFileMetaData.add(++totalLevelsOfTreeIndex);
+            byte[] metaDataInBytes = serialize(indexFileMetaData);
+            byte[] metaDataLengthInBytes = serialize(metaDataInBytes.length);
+            byte[] block = new byte[BLOCK_SIZE];
+            System.arraycopy(metaDataInBytes, 0, block, 0, metaDataLengthInBytes.length);
+            System.arraycopy(metaDataInBytes, metaDataLengthInBytes.length, block, 0, block.length);
+
+            RandomAccessFile raf = new RandomAccessFile(new File(PATH_TO_DATAFILE), "rw");
+            raf.write(block);
+            raf.close();
+
+        } catch (Exception e){
+            e.printStackTrace();
+        }
+    }
+
+
+    //Reads data from csv and adds it to IndexFile
+
+    static void initializeIndexFile(int dataDimensions, boolean newFile){
+        try{
+            if(!newFile && Files.exists(Paths.get(PATH_TO_INDEXFILE))){
+                ArrayList<Integer> indexFileMetaData = readMetaDataBlock(PATH_TO_INDEXFILE);
+                if(indexFileMetaData == null) {
+                    throw new Exception("Could not read index file's MetaData block");
+                }
+                FilesHandler.dataDimensions = indexFileMetaData.get(0);
+                if(FilesHandler.dataDimensions <= 0){
+                    throw new Exception("Data dimensions must be greater than 0");
+                }
+                if(indexFileMetaData.get(1) != BLOCK_SIZE){
+                    throw new Exception("Block size read was not " + BLOCK_SIZE + " bytes");
+                }
+                totalBlocksInIndexFile = indexFileMetaData.get(2);
+                if(totalBlocksInIndexFile < 0){
+                    throw new Exception("Total blocks in data file must be greater than 0");
+                }
+                totalLevelsOfTreeIndex = indexFileMetaData.get(3);
+                if(totalLevelsOfTreeIndex < 0){
+                    throw new Exception("Total levels of tree index must be greater than 0");
+                }
+            }
+            // if it doesnt exist
+            else {
+                Files.deleteIfExists(Paths.get(PATH_TO_INDEXFILE));
+                FilesHandler.dataDimensions = dataDimensions;
+                totalLevelsOfTreeIndex = 1;
+                if(FilesHandler.dataDimensions <= 0){
+                    throw new Exception("Data dimensions must be greater than 0");
+                }
+                updateMetaDataBlock(PATH_TO_INDEXFILE);
+            }
+        } catch(Exception e){
+            e.printStackTrace();
+        }
+    }
+
+    // Appends given Node as a new block in indexFiles
+    static void writeNewIndexFileBlock(Node node){
+        try {
+            byte[] nodeInBytes = serialize(node);
+            byte[] metaDataLengthInBytes = serialize(nodeInBytes.length);
+            byte[] block = new byte[BLOCK_SIZE];
+            System.arraycopy(nodeInBytes, 0, block, 0, metaDataLengthInBytes.length);
+            System.arraycopy(nodeInBytes, metaDataLengthInBytes.length, block, 0, block.length);
+
+            FileOutputStream fos = new FileOutputStream(PATH_TO_INDEXFILE,true);
+            BufferedOutputStream bos = new BufferedOutputStream(fos);
+            bos.write(block);
+            updateMetaDataBlock(PATH_TO_INDEXFILE);
+        } catch (Exception e){
+            e.printStackTrace();
+        }
+    }
+
+
+    // Updates IndexFile block with the Node
+    static void updateIndexFileBlock(Node node, int totalLevelsOfTreeIndex) {
+        try {
+            byte[] nodeInBytes = serialize(node);
+            byte[] goodPutLengthInBytes = serialize(nodeInBytes.length);
+            byte[] block = new byte[BLOCK_SIZE];
+            System.arraycopy(goodPutLengthInBytes, 0, block, 0, goodPutLengthInBytes.length);
+            System.arraycopy(nodeInBytes, 0, block, goodPutLengthInBytes.length, nodeInBytes.length);
+
+            RandomAccessFile f = new RandomAccessFile(new File(PATH_TO_INDEXFILE), "rw");
+            f.seek(node.getBlockId()*BLOCK_SIZE); // this basically reads n bytes in the file
+            f.write(block);
+            f.close();
+
+            if (node.getBlockId() == RStarTree.getRootNodeBlockId() && FilesHelper.totalLevelsOfTreeIndex != totalLevelsOfTreeIndex)
+                updateLevelsOfTreeIndexFile();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    static Node readIndexFileBlock(long blockId) {
+        try{
+            RandomAccessFile raf = new RandomAccessFile(new File(PATH_TO_INDEXFILE), "rw");
+            FileInputStream fis = new FileInputStream(raf.getFD());
+            BufferedInputStream bis = new BufferedInputStream(fis);
+            raf.seek(blockId*BLOCK_SIZE);
+            byte[] block = new byte[BLOCK_SIZE];
+            if(bis.read(block,0,BLOCK_SIZE) != BLOCK_SIZE){
+                throw new Exception("Block size read was not " + BLOCK_SIZE + " bytes");
+            }
+
+            byte[] metaDataLengthInBytes = serialize(block.length);
+            System.arraycopy(metaDataLengthInBytes, 0, block, 0, metaDataLengthInBytes.length);
+
+            byte[] nodeInBytes = new byte[(Integer)deserialize(metaDataLengthInBytes)];
+            System.arraycopy(block, metaDataLengthInBytes.length, nodeInBytes, 0, nodeInBytes.length);
+
+            return (Node) deserialize(nodeInBytes);
+
+        } catch(Exception e){
+            e.printStackTrace();
+        }
+        return null;
     }
 
 
