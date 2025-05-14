@@ -3,22 +3,22 @@ package rstartree.geometry;
 import java.util.ArrayList;
 
 public class Point {
-    private final double[] coords;
+    private final ArrayList<Double> coords;
 
     public Point(ArrayList<Double> coords) {
-        this.coords = coords.clone();
+        this.coords = (ArrayList<Double>) coords.clone();
     }
 
     public int getDimensions() {
-        return coords.length;
+        return coords.size();
     }
 
     public double getCoord(int i) {
-        return coords[i];
+        return coords.get(i);
     }
 
-    public double[] getCoords() {
-        return coords.clone();
+    public ArrayList<Double> getCoords() {
+        return coords;
     }
 
     public double distanceTo(Point other) {
@@ -26,8 +26,8 @@ public class Point {
             throw new IllegalArgumentException("Dimension mismatch");
         }
         double sum = 0;
-        for (int i = 0; i < coords.length; i++) {
-            double diff = coords[i] - other.getCoord(i);
+        for (int i = 0; i < coords.size(); i++) {
+            double diff = coords.get(i) - other.getCoord(i);
             sum += diff * diff;
         }
         return Math.sqrt(sum);
@@ -36,9 +36,9 @@ public class Point {
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder("Point(");
-        for (int i = 0; i < coords.length; i++) {
-            sb.append(coords[i]);
-            if (i < coords.length - 1) sb.append(", ");
+        for (int i = 0; i < coords.size(); i++) {
+            sb.append(coords.get(i));
+            if (i < coords.size() - 1) sb.append(", ");
         }
         sb.append(")");
         return sb.toString();
