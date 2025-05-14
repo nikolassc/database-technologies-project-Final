@@ -1,4 +1,5 @@
-import java.util.*;
+/* import java.util.*;
+
 
 // Class used for executing a k-nearest neighbours query of a specific search point with the use of the RStarTree
 // Finds the k closest records of that search point
@@ -59,6 +60,7 @@ class NearestNeighboursQuery{
         }
     }
 }
+*/
 
 
 // Class which is used to hold an id of a record it's distance from a specific item

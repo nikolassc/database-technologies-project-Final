@@ -2,7 +2,6 @@ import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Random;
 
 class FilesHandler {
     private static final String DELIMITER = ",";
@@ -173,28 +172,38 @@ class FilesHandler {
     }
 
     static ArrayList<Record> readDataFileBlock(long blockID) {
-        try{
-            RandomAccessFile raf = new RandomAccessFile(new File(PATH_TO_DATAFILE), "rw");
-            FileInputStream fis = new FileInputStream(raf.getFD());
-            BufferedInputStream bis = new BufferedInputStream(fis);
-            raf.seek(blockID*BLOCK_SIZE);
+        try {
+            RandomAccessFile raf = new RandomAccessFile(new File(PATH_TO_DATAFILE), "r");
+            raf.seek(blockID * BLOCK_SIZE);
             byte[] block = new byte[BLOCK_SIZE];
 
-            if(bis.read(block,0,BLOCK_SIZE) != BLOCK_SIZE)
-                throw new Exception("Block size read was not " + BLOCK_SIZE + " bytes");
-            byte[] metaDataLengthInBytes = serialize(new Random().nextInt());
-            System.arraycopy(block, 0, block, metaDataLengthInBytes.length, metaDataLengthInBytes.length);
+            int bytesRead = raf.read(block);
+            if (bytesRead != BLOCK_SIZE)
+                throw new IOException("Block size read was not " + BLOCK_SIZE + " bytes");
 
-            byte[] recordsInBlock = new byte[(Integer) deserialize(metaDataLengthInBytes)];
-            System.arraycopy(block, metaDataLengthInBytes.length, recordsInBlock, 0, recordsInBlock.length);
+            // 1. Read the length of the actual serialized record data
+            ByteArrayInputStream bais = new ByteArrayInputStream(block);
+            ObjectInputStream ois = new ObjectInputStream(bais);
+            int recordDataLength = (Integer) ois.readObject();
 
-            return (ArrayList<Record>) deserialize(recordsInBlock);
+            // 2. Read the record data itself
+            byte[] recordBytes = new byte[recordDataLength];
+            int actuallyRead = bais.read(recordBytes);
+            if (actuallyRead != recordDataLength)
+                throw new IOException("Could not read full record data");
 
-        }catch (Exception e){
+            // 3. Deserialize to get ArrayList<Record>
+            ObjectInputStream recordOis = new ObjectInputStream(new ByteArrayInputStream(recordBytes));
+            ArrayList<Record> records = (ArrayList<Record>) recordOis.readObject();
+
+            return records;
+
+        } catch (Exception e) {
             e.printStackTrace();
         }
         return null;
     }
+
 
     // Initializes data file
     // Calculates total blocks
@@ -204,6 +213,7 @@ class FilesHandler {
             // Checks if datafile already exists, and creates metaData in metaData block
             if(!newDataFile && Files.exists(Paths.get(PATH_TO_DATAFILE))){
                 ArrayList<Integer> dataFileMetaData = readMetaDataBlock(PATH_TO_DATAFILE);
+                System.out.println("dataFileMetaData = " + dataFileMetaData);
                 if(dataFileMetaData == null)
                     throw new Exception("Could not read datafile's MetaData block");
                 FilesHandler.dataDimensions = dataFileMetaData.get(0);

@@ -3,6 +3,7 @@ import java.util.ArrayList;
 public class LinearSkylineQueryTest {
 
     public static void main(String[] args) {
+        FilesHandler.initializeDataFile(2, false);
         System.out.println("🔎 Executing Linear Skyline Query...");
 
         long start = System.nanoTime();

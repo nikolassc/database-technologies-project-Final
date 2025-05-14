@@ -44,5 +44,6 @@ public class Main {
 
         FilesHandler.initializeDataFile(dataDimensions, resetFiles);
         FilesHandler.initializeIndexFile(dataDimensions, resetFiles);
+
     }
 }
