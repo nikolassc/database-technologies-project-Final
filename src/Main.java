@@ -1,8 +1,9 @@
 import java.io.*;
-import java.util.ArrayList;
 
 public class Main {
     public static void main(String[] args) {
+        Block block = null; // ➊ Δηλώνεται εκτός try, ώστε να είναι ορατή παντού
+
         try {
             // 1. Δημιουργία εγγραφών
             ArrayList<Double> cafeCoords = new ArrayList<>();
@@ -14,19 +15,20 @@ public class Main {
             Record cafe = new Record(1, "Cafe Central", cafeCoords);
             Record museum = new Record(2, "Acropolis Museum", museumCoords);
 
-            // 2. Δημιουργία block και προσθήκη εγγραφών
-            Block block = new Block(0);
+            // 2. Create blocks and insert data
+            block = new Block(1);
             block.addRecord(cafe);
             block.addRecord(museum);
+            block.addRecord(university);
 
-            // 3. Μετατροπή σε bytes
+            // 3. Convert to bytes
             byte[] bytes = block.toBytes();
             System.out.println("Serialized block to bytes: " + bytes.length + " bytes");
 
-            // 4. Ανάγνωση από bytes
+            // 4. Read from bytes
             Block loadedBlock = Block.fromBytes(bytes);
 
-            // 5. Εκτύπωση αποτελεσμάτων
+            // 5. Print the records
             System.out.println("Deserialized Block:");
             System.out.println("Block ID: " + loadedBlock.getBlockID());
             System.out.println("Number of records: " + loadedBlock.recordCount());
@@ -37,6 +39,21 @@ public class Main {
 
         } catch (IOException e) {
             e.printStackTrace();
+        }
+
+        // Range Query
+        if (block != null) {
+            double[] min = {9.5, 19.5, 4.5};
+            double[] max = {11.5, 21.5, 6.0};
+
+            List<Records> result = LinearRangeQuery.runLinearQuery(block, min, max);
+
+            System.out.println("Range query found " + result.size() + " results:");
+            for (Records rec : result) {
+                System.out.println(rec);
+            }
+        } else {
+            System.out.println("Block was not initialized.");
         }
     }
 }
