@@ -1,46 +1,48 @@
 import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Scanner;
 
 public class Main {
     public static void main(String[] args) {
-        Block block = null; // ➊ Δηλώνεται εκτός try, ώστε να είναι ορατή παντού
+        boolean filesExist = Files.exists(Paths.get(FilesHandler.PATH_TO_DATAFILE));
+        boolean resetFiles = false;
 
-        try {
-            // 1. Δημιουργία εγγραφών
-            ArrayList<Double> cafeCoords = new ArrayList<>();
-            ArrayList<Double> museumCoords = new ArrayList<>();
-            cafeCoords.add(37.9838);
-            cafeCoords.add(23.7275);
-            museumCoords.add(37.9681);
-            museumCoords.add(23.7286);
-            Record cafe = new Record(1, "Cafe Central", cafeCoords);
-            Record museum = new Record(2, "Acropolis Museum", museumCoords);
+        Scanner scanner = new Scanner(System.in);
 
-            // 2. Create blocks and insert data
-            block = new Block(1);
-            block.addRecord(cafe);
-            block.addRecord(museum);
-
-            // 3. Convert to bytes
-            byte[] bytes = block.toBytes();
-            System.out.println("Serialized block to bytes: " + bytes.length + " bytes");
-
-            // 4. Read from bytes
-            Block loadedBlock = Block.fromBytes(bytes);
-
-            // 5. Print the records
-            System.out.println("Deserialized Block:");
-            System.out.println("Block ID: " + loadedBlock.getBlockID());
-            System.out.println("Number of records: " + loadedBlock.recordCount());
-
-            for (int i = 0; i < loadedBlock.recordCount(); i++) {
-                System.out.println("Record " + i + ": " + loadedBlock.getRecord(i));
+        if (filesExist) {
+            System.out.println("Existed data-file and index-file found.");
+            System.out.print("Do you want to make new ones based on the data of the " + FilesHandler.getPathToCsv() +  " file? (y/n): ");
+            String answer;
+            while (true)
+            {
+                answer = scanner.nextLine().trim().toLowerCase();
+                System.out.println();
+                // In case user wants to reset the files
+                if (answer.equals("y")) {
+                    resetFiles = true;
+                    break;
+                } else if (answer.equals("n")) {
+                    break;
+                } else {
+                    System.out.println("Please answer with y/n: ");
+                }
             }
-
-        } catch (IOException e) {
-            e.printStackTrace();
         }
 
+        boolean insertRecordsFromDataFile = false;
+        int dataDimensions = 0;
+
+        if(!filesExist || resetFiles) {
+            insertRecordsFromDataFile = true;
+            System.out.print("Give the dimensions of the spacial data (dimensions need to be the same as the data saved in " + FilesHandler.getPathToCsv() + "): ");
+            dataDimensions = scanner.nextInt();
+            System.out.println();
+        }
+
+        FilesHandler.initializeDataFile(dataDimensions, resetFiles);
+        FilesHandler.initializeIndexFile(dataDimensions, resetFiles);
     }
 }

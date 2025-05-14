@@ -6,9 +6,9 @@ import java.util.Random;
 
 class FilesHandler {
     private static final String DELIMITER = ",";
-    private static final String PATH_TO_CSV = "data.csv";
-    static final String PATH_TO_DATAFILE = "datafile.dat";
-    static final String PATH_TO_INDEXFILE = "indexfile.dat";
+    private static final String PATH_TO_CSV = "src/resources/data.csv";
+    static final String PATH_TO_DATAFILE = "src/resources/datafile.dat";
+    static final String PATH_TO_INDEXFILE = "src/resources/indexfile.dat";
     private static final int BLOCK_SIZE = 32 * 1024;
     private static int dataDimensions;
     private static int totalBlocksInDataFile;
@@ -105,24 +105,30 @@ class FilesHandler {
     private static int calculateMaxRecordsInBlock() {
         ArrayList<Record> blockRecords = new ArrayList<>();
         int i;
-        for (i = 0; i < Integer.MAX_VALUE; i++) {
-            ArrayList<Double> coordinateForEachDimension = new ArrayList<>();
-            for (int d = 0; d < FilesHandler.dataDimensions; d++)
-                coordinateForEachDimension.add(0.0);
-            Record record = new Record(0, " ",coordinateForEachDimension);
+        for (i = 0; i < 10000; i++) { // Αυθαίρετο upper bound
+            ArrayList<Double> coords = new ArrayList<>();
+            for (int d = 0; d < dataDimensions; d++)
+                coords.add(0.0);
+
+            // Πρόσεξε: βάλε και non-empty string για name
+            Record record = new Record(0, "default_name", coords);
             blockRecords.add(record);
-            byte[] recordInBytes = new byte[0];
-            byte[] metaDataLengthInBytes = new byte[0];
-            try {
-                recordInBytes = serialize(blockRecords);
-                metaDataLengthInBytes = serialize(recordInBytes.length);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-            if (metaDataLengthInBytes.length + recordInBytes.length > BLOCK_SIZE)
+
+            byte[] recordInBytes = serializeOrEmpty(blockRecords);
+            byte[] lengthInBytes = serializeOrEmpty(recordInBytes.length);
+
+            if (lengthInBytes.length + recordInBytes.length > BLOCK_SIZE)
                 break;
         }
-        return i;
+        return i - 1;
+    }
+
+    private static byte[] serializeOrEmpty(Object obj) {
+        try {
+            return serialize(obj);
+        } catch (IOException e) {
+            return new byte[0];
+        }
     }
 
     private static void writeDataFileBlock(ArrayList<Record> records) {
@@ -130,7 +136,12 @@ class FilesHandler {
             byte[] recordInBytes = serialize(records);
             byte[] metaDataLengthInBytes = serialize(recordInBytes.length);
             byte[] block = new byte[BLOCK_SIZE];
-            System.arraycopy(recordInBytes, 0, block, 0, metaDataLengthInBytes.length);
+
+            if (metaDataLengthInBytes.length + recordInBytes.length > BLOCK_SIZE) {
+                throw new IllegalStateException("Block too large to fit in one data block");
+            }
+
+            System.arraycopy(metaDataLengthInBytes, 0, block, 0, metaDataLengthInBytes.length);
             System.arraycopy(recordInBytes, 0, block, metaDataLengthInBytes.length, recordInBytes.length);
 
             FileOutputStream fos = new FileOutputStream(PATH_TO_DATAFILE, true);
@@ -196,7 +207,7 @@ class FilesHandler {
                 updateMetaDataBlock(PATH_TO_DATAFILE);
                 ArrayList<Record> blockRecords = new ArrayList<>();
                 BufferedReader csvReader = new BufferedReader(new FileReader(PATH_TO_CSV));
-                String line;
+                String line = csvReader.readLine();
                 int maxRecordsInBlock = calculateMaxRecordsInBlock();
                 while ((line = csvReader.readLine()) != null) {
                     if (blockRecords.size() == maxRecordsInBlock) {
@@ -326,7 +337,8 @@ class FilesHandler {
             byte[] nodeInBytes = serialize(node);
             byte[] metaDataLengthInBytes = serialize(nodeInBytes.length);
             byte[] block = new byte[BLOCK_SIZE];
-            System.arraycopy(nodeInBytes, 0, block, 0, metaDataLengthInBytes.length);
+
+            System.arraycopy(metaDataLengthInBytes, 0, block, 0, metaDataLengthInBytes.length);
             System.arraycopy(nodeInBytes, metaDataLengthInBytes.length, block, 0, block.length);
 
             FileOutputStream fos = new FileOutputStream(PATH_TO_INDEXFILE,true);

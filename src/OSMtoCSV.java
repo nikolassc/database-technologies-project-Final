@@ -30,7 +30,7 @@ public class OSMtoCSV {
 
             // Ψάχνουμε για tag name, αν δεν βρούμε βάζουμε "unnamed location"
             NodeList tags = node.getElementsByTagName("tag");
-            String name = "unnamed location";
+            String name = " ";
             for (int j = 0; j < tags.getLength(); j++) {
                 Element tag = (Element) tags.item(j);
                 if (tag.getAttribute("k").equals("name")) {

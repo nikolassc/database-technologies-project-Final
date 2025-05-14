@@ -12,18 +12,22 @@ public class Record implements Serializable{
         this.name = name;
         this.coor = coor;
     }
-    public Record(String recordInString){
+    public Record(String recordInString) {
         String[] stringArray = recordInString.split(FilesHandler.getDelimiter());
 
-        if(stringArray.length != FilesHandler.getDataDimensions() + 2)
-            throw new IllegalArgumentException("Record input string is not correct");
+        // Expecting: ID + name + coordinates
+        if (stringArray.length != FilesHandler.getDataDimensions() + 2)
+            throw new IllegalArgumentException("Record input string is not correct: " + recordInString);
 
         recordID = Long.parseLong(stringArray[0]);
+        name = stringArray[1];
+
         coor = new ArrayList<>();
-        for(int i = 1; i < stringArray.length; i++){
+        for (int i = 2; i < stringArray.length; i++) {
             coor.add(Double.parseDouble(stringArray[i]));
         }
     }
+
 
     // Getters
     public long getRecordID(){
@@ -43,9 +47,10 @@ public class Record implements Serializable{
     // Custom output for the records
     @Override
     public String toString() {
-        StringBuilder recordToString = new StringBuilder(recordID + "," + coor.get(0));
-        for(int i = 1; i < coor.size(); i++)
-            recordToString.append(",").append(coor.get(i));
-        return String.valueOf(recordToString);
+        StringBuilder recordToString = new StringBuilder(recordID + "," + name);
+        for (double c : coor) {
+            recordToString.append(",").append(c);
+        }
+        return recordToString.toString();
     }
 }
