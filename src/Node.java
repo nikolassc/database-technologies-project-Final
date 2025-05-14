@@ -107,8 +107,8 @@ public class Node implements Serializable {
             List<Entry> group1 = sortedEntries.subList(0, splitIndex);
             List<Entry> group2 = sortedEntries.subList(splitIndex, total);
 
-            BoundingBox bb1 = new BoundingBox(Bounds.findMinimumBounds((ArrayList<Entry>) group1));
-            BoundingBox bb2 = new BoundingBox(Bounds.findMinimumBounds((ArrayList<Entry>) group2));
+            MBR bb1 = new MBR(Bounds.findMinimumBounds((ArrayList<Entry>) group1));
+            MBR bb2 = new MBR(Bounds.findMinimumBounds((ArrayList<Entry>) group2));
 
             distributions.add(new Distribution(
                     new DistributionGroup(new ArrayList<>(group1), bb1),
@@ -129,10 +129,10 @@ public class Node implements Serializable {
 
         for (int i = 0; i < splitAxisDistributions.size(); i++) {
             Distribution dist = splitAxisDistributions.get(i);
-            BoundingBox bb1 = dist.getFirstGroup().getBoundingBox();
-            BoundingBox bb2 = dist.getSecondGroup().getBoundingBox();
+            MBR bb1 = dist.getFirstGroup().getBoundingBox();
+            MBR bb2 = dist.getSecondGroup().getBoundingBox();
 
-            double overlap = BoundingBox.calculateOverlapValue(bb1, bb2);
+            double overlap = MBR.calculateOverlapValue(bb1, bb2);
             double areaSum = bb1.getArea() + bb2.getArea();
 
             if (overlap < minOverlap || (overlap == minOverlap && areaSum < minArea)) {
@@ -172,18 +172,18 @@ public class Node implements Serializable {
 
 class DistributionGroup {
     private ArrayList<Entry> entries;
-    private BoundingBox boundingBox;
+    private MBR MBR;
 
-    DistributionGroup(ArrayList<Entry> entries, BoundingBox boundingBox) {
+    DistributionGroup(ArrayList<Entry> entries, MBR MBR) {
         this.entries = entries;
-        this.boundingBox = boundingBox;
+        this.MBR = MBR;
     }
 
     ArrayList<Entry> getEntries() {
         return entries;
     }
 
-    BoundingBox getBoundingBox(){
-        return boundingBox;
+    MBR getBoundingBox(){
+        return MBR;
     }
 }

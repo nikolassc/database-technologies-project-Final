@@ -41,13 +41,13 @@ class Bounds implements Serializable {
     }
 
     // Returns an ArrayList with bounds for each dimension, including the the minimum bounds needed to merge the given bounding boxes
-    static ArrayList<Bounds> findMinimumBounds(BoundingBox boundingBoxA, BoundingBox boundingBoxB) {
+    static ArrayList<Bounds> findMinimumBounds(MBR MBRA, MBR MBRB) {
         ArrayList<Bounds> minimumBounds = new ArrayList<>();
         // For each dimension finds the minimum interval needed for the entries to fit
         for (int d = 0; d < FilesHandler.getDataDimensions(); d++)
         {
-            double lower = Math.min(boundingBoxA.getBounds().get(d).getLower(), boundingBoxB.getBounds().get(d).getLower());
-            double upper = Math.max(boundingBoxA.getBounds().get(d).getUpper(), boundingBoxB.getBounds().get(d).getUpper());
+            double lower = Math.min(MBRA.getBounds().get(d).getLower(), MBRB.getBounds().get(d).getLower());
+            double upper = Math.max(MBRA.getBounds().get(d).getUpper(), MBRB.getBounds().get(d).getUpper());
             minimumBounds.add(new Bounds(lower,upper));
         }
         return minimumBounds;

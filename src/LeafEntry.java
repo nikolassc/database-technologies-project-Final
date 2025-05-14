@@ -9,7 +9,7 @@ class LeafEntry extends Entry {
     private long dataFileBlockId; // The id of the block which the record is saved in the datafile
 
     LeafEntry(long recordId, long dataFileBlockId, ArrayList<Bounds> recordBounds) {
-        super(new BoundingBox(recordBounds));
+        super(new MBR(recordBounds));
         this.recordId = recordId;
         this.dataFileBlockId = dataFileBlockId;
     }
