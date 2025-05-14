@@ -63,4 +63,26 @@ public class RangeQuery {
         }
         return true;
     }
+    public static void main(String[] args) {
+        // Καθορισμός εύρους αναζήτησης (ανάλογα με το datafile σου)
+        double[] min = {23.0, 40.0};  // π.χ. lon min / lat min
+        double[] max = {24.0, 41.0};  // lon max / lat max
+
+        // Εκτέλεση σειριακής range query
+        System.out.println("🔍 Εκτέλεση Linear Range Query (χωρίς index)...");
+        long start = System.currentTimeMillis();
+        List<Record> results = LinearRangeQuery.runLinearQuery(min, max);
+        long end = System.currentTimeMillis();
+
+        // Εκτύπωση αποτελεσμάτων
+        System.out.println("✅ Βρέθηκαν " + results.size() + " εγγραφές:");
+        for (Record r : results) {
+            System.out.println(r);
+        }
+
+        System.out.println("⏱ Χρόνος εκτέλεσης: " + (end - start) + " ms");
+    }
 }
+
+
+
