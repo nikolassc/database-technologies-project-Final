@@ -18,7 +18,7 @@ public class LinearKNNTest {
 
         // Εκτέλεση k-NN query
         LinearNearestNeighboursQuery query = new LinearNearestNeighboursQuery(queryPoint, k);
-        ArrayList<Long> resultIds = query.getQueryRecordIds();
+        ArrayList<Record> results = query.getNearestRecords();
 
         long end = System.nanoTime();
         double durationMs = (end - start) / 1_000_000.0;
@@ -36,19 +36,11 @@ public class LinearKNNTest {
 
         // Εκτύπωση αποτελεσμάτων
         System.out.println("✅ k-NN Query completed in " + durationMs + " ms");
-        System.out.println("📦 Number of neighbours found: " + resultIds.size());
+        System.out.println("📦 Number of neighbours found: " + results.size());
         System.out.println("📍 Nearest neighbour record IDs (sorted):");
 
-        for (Long id : resultIds) {
-            Record rec = allRecordsById.get(id);
-            if (rec != null) {
-                System.out.println(" - ID: " + rec.getRecordID() +
-                        ", Name: " + rec.getName() +
-                        ", Coords: " + rec.getCoordinates());
-            } else {
-                System.out.println(" - ID: " + id + " (record not found)");
-            }
-
+        for(Record r : results){
+            System.out.println(r.toString());
         }
     }
 }

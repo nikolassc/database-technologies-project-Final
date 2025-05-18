@@ -5,76 +5,86 @@ import java.util.PriorityQueue;
 
 // Class used for executing a k-nearest neighbours query of a specific search point without any use of an index
 // Finds the k closest records of that search point
-class LinearNearestNeighboursQuery  {
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.PriorityQueue;
+
+class LinearNearestNeighboursQuery {
     private ArrayList<Double> searchPoint;
     private int k;
-    private PriorityQueue<IdDistancePair> nearestNeighbours;
-
+    private PriorityQueue<RecordDistancePair> nearestNeighbours;
 
     LinearNearestNeighboursQuery(ArrayList<Double> searchPoint, int k) {
         if (k < 0)
             throw new IllegalArgumentException("Parameter 'k' for the nearest neighbours must be a positive integer.");
         this.searchPoint = searchPoint;
         this.k = k;
-        this.nearestNeighbours = new PriorityQueue<>(k, new Comparator<IdDistancePair>() {
+
+        // Μετατρέπει το PriorityQueue σε max-heap (με βάση απόσταση)
+        this.nearestNeighbours = new PriorityQueue<>(k, new Comparator<RecordDistancePair>() {
             @Override
-            public int compare(IdDistancePair recordDistancePairA, IdDistancePair recordDistancePairB) {
-                return Double.compare(recordDistancePairB.getDistanceFromItem(),recordDistancePairA.getDistanceFromItem()); // In order to make a MAX heap
+            public int compare(RecordDistancePair a, RecordDistancePair b) {
+                return Double.compare(b.getDistance(), a.getDistance());
             }
         });
     }
 
-    // Returns the ids of the query's records
-
-    ArrayList<Long> getQueryRecordIds() {
-        ArrayList<Long> qualifyingRecordIds = new ArrayList<>();
+    // ✅ Νέα έκδοση που επιστρέφει τα Record αντικείμενα
+    ArrayList<Record> getNearestRecords() {
         findNeighbours();
-        while (nearestNeighbours.size() != 0)
-        {
-            IdDistancePair recordDistancePair = nearestNeighbours.poll();
-            qualifyingRecordIds.add(recordDistancePair.getRecordId());
+        ArrayList<Record> result = new ArrayList<>();
+        while (!nearestNeighbours.isEmpty()) {
+            result.add(nearestNeighbours.poll().getRecord());
         }
-        Collections.reverse(qualifyingRecordIds); // In order to return closest neighbours first instead of farthest
-        return qualifyingRecordIds;
+        Collections.reverse(result); // Να είναι τα πιο κοντινά πρώτα
+        return result;
     }
 
-    private void findNeighbours(){
-        int blockId = 1;
-        while(blockId < FilesHandler.getTotalBlocksInDataFile())
-        {
-            ArrayList<Record> recordsInBlock;
-            recordsInBlock = FilesHandler.readDataFileBlock(blockId);
-            ArrayList<LeafEntry> entries = new ArrayList<>();
+    private void findNeighbours() {
+        int totalBlocks = FilesHandler.getTotalBlocksInDataFile();
+        for (int blockId = 1; blockId < totalBlocks; blockId++) {
+            ArrayList<Record> recordsInBlock = FilesHandler.readDataFileBlock(blockId);
+            if (recordsInBlock == null) continue;
 
-            if (recordsInBlock != null)
-            {
-                for (Record record : recordsInBlock)
-                {
-                    ArrayList<Bounds> boundsForEachDimension = new ArrayList<>();
-                    // Since we have to do with points as records we set low and upper to be same
-                    for (int d = 0; d < FilesHandler.getDataDimensions(); d++)
-                        boundsForEachDimension.add(new Bounds(record.getCoordinateFromDimension(d), record.getCoordinateFromDimension(d)));
+            for (Record record : recordsInBlock) {
+                double distance = calculateEuclideanDistance(record.getCoordinates(), searchPoint);
 
-                    entries.add(new LeafEntry(record.getRecordID(), blockId, boundsForEachDimension));
-                }
-                int i = 0;
-                while(i < entries.size()){
-                    double distanceFromPoint = entries.get(i).getBoundingBox().findMinDistanceFromPoint(searchPoint);
-                    if(nearestNeighbours.size() == k){
-                        if(distanceFromPoint < nearestNeighbours.peek().getDistanceFromItem()){
-                            nearestNeighbours.poll();
-                            nearestNeighbours.add(new IdDistancePair(entries.get(i).getRecordId(), distanceFromPoint));
-                        }
-                    }else{
-                        nearestNeighbours.add(new IdDistancePair(entries.get(i).getRecordId(), distanceFromPoint));
-                    }
-
-                    i++;
+                if (nearestNeighbours.size() < k) {
+                    nearestNeighbours.add(new RecordDistancePair(record, distance));
+                } else if (distance < nearestNeighbours.peek().getDistance()) {
+                    nearestNeighbours.poll();
+                    nearestNeighbours.add(new RecordDistancePair(record, distance));
                 }
             }
-            else
-                throw new IllegalStateException("Could not read records properly from the datafile");
-            blockId++;
         }
     }
+
+    // Υπολογισμός ευκλείδειας απόστασης
+    private double calculateEuclideanDistance(ArrayList<Double> a, ArrayList<Double> b) {
+        double sum = 0;
+        for (int i = 0; i < a.size(); i++) {
+            double diff = a.get(i) - b.get(i);
+            sum += diff * diff;
+        }
+        return Math.sqrt(sum);
+    }
 }
+
+    class RecordDistancePair {
+        private final Record record;
+        private final double distance;
+
+        public RecordDistancePair(Record record, double distance) {
+            this.record = record;
+            this.distance = distance;
+        }
+
+        public Record getRecord() {
+            return record;
+        }
+
+        public double getDistance() {
+            return distance;
+        }
+    }

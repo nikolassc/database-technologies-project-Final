@@ -213,7 +213,6 @@ class FilesHandler {
             // Checks if datafile already exists, and creates metaData in metaData block
             if(!newDataFile && Files.exists(Paths.get(PATH_TO_DATAFILE))){
                 ArrayList<Integer> dataFileMetaData = readMetaDataBlock(PATH_TO_DATAFILE);
-                System.out.println("dataFileMetaData = " + dataFileMetaData);
                 if(dataFileMetaData == null)
                     throw new Exception("Could not read datafile's MetaData block");
                 FilesHandler.dataDimensions = dataFileMetaData.get(0);

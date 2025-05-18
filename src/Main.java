@@ -1,9 +1,8 @@
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Scanner;
+import java.sql.SQLOutput;
+import java.util.*;
 
 public class Main {
     public static void main(String[] args) {
@@ -39,11 +38,164 @@ public class Main {
             insertRecordsFromDataFile = true;
             System.out.print("Give the dimensions of the spacial data (dimensions need to be the same as the data saved in " + FilesHandler.getPathToCsv() + "): ");
             dataDimensions = scanner.nextInt();
+            scanner.nextLine();
             System.out.println();
         }
 
         FilesHandler.initializeDataFile(dataDimensions, resetFiles);
         FilesHandler.initializeIndexFile(dataDimensions, resetFiles);
+
+        String selection;
+        do {
+            System.out.println("Please select a query you would like to execute: \n" +
+                    "0) Exit application \n" +
+                    "1) Linear Range Query \n" +
+                    "2) Range Query using R* Tree index (WIP)\n" + //@TODO Range Query using Index
+                    "3) Linear K-Nearest Neighbors Query\n" +
+                    "4) K-Nearest Neighbors Query using R* Tree Index (WIP)\n"+ //@TODO K-nn Query using Index
+                    "5) Linear Skyline Query\n" +
+                    "6) Skyline Query using R* Tree Index (WIP)"); //@TODO Skyline Query using Index
+            selection = scanner.nextLine().trim();
+            System.out.println();
+
+            // Initializing variables for queries
+            double duration_in_ms;
+            long startTime;
+            long endTime;
+            ArrayList<Record> queryResults;
+
+
+            switch (selection) {
+
+                //      EXIT
+                case "0":
+                    System.out.println("Exiting application");
+                    break;
+
+                //      LINEAR RANGE QUERY
+                case "1":
+                    System.out.println("Linear Range Query Selected");
+
+                    //Runs for more than 2 dimensions if needed
+                    ArrayList<Bounds> boundsList = new ArrayList<>();
+                    int dims = FilesHandler.getDataDimensions();
+
+                    System.out.println("Give Lower and Upper bounds for the Query MBR for each dimension: ");
+                    for (int i = 0; i < dims; i++) {
+                        while (true) {
+                            System.out.print("Give bounds for dimension " + (i + 1) + " (lower Bound First): ");
+                            double lower = scanner.nextDouble();
+                            double upper = scanner.nextDouble();
+
+                            if (lower <= upper) {
+                                boundsList.add(new Bounds(lower, upper));
+                                break;
+                            } else {
+                                System.out.println("Lower bound must be less than or equal to upper bound. Try again.");
+                            }
+                        }
+                    }
+
+                    MBR queryMBR = new MBR(boundsList);
+                    startTime = System.nanoTime();
+                    queryResults = LinearRangeQuery.runLinearRangeQuery(queryMBR);
+                    endTime = System.nanoTime();
+                    duration_in_ms = (endTime - startTime) / 1000000.0;
+
+                    System.out.println("Linear Range query completed in " + duration_in_ms + " milliseconds");
+                    System.out.println("Total points found in range: " + queryResults.size());
+                    System.out.println("Results:");
+
+                    for (Record record : queryResults) {
+                        System.out.println(record.toString());
+                    }
+
+                    System.out.println();
+
+
+                    break;
+
+                //      RANGE QUERY
+                case "2":
+                    System.out.println("Range Query using R* Tree index Selected(WIP)");
+                    break;
+
+                //      LINEAR KNN QUERY
+                case "3":
+                    System.out.println("Linear K-Nearest Neighbors Query Selected");
+
+                    System.out.print("Enter value for K: ");
+                    int k = scanner.nextInt();
+                    scanner.nextLine(); // <-- Απαραίτητο!
+
+                    int dimensions = FilesHandler.getDataDimensions();
+                    ArrayList<Double> queryPoint = new ArrayList<>();
+                    System.out.println("Enter coordinates of the query point (you have " + dimensions + " dimensions):");
+                    for (int i = 0; i < dimensions; i++) {
+                        System.out.print("Dimension " + (i + 1) + ": ");
+                        double val = scanner.nextDouble();
+                        scanner.nextLine(); // <-- Απαραίτητο σε κάθε αριθμό!
+                        queryPoint.add(val);
+                    }
+
+                    // Run k-NN query
+                    startTime = System.nanoTime();
+                    LinearNearestNeighboursQuery query = new LinearNearestNeighboursQuery(queryPoint, k);
+                    queryResults = query.getNearestRecords();
+                    endTime = System.nanoTime();
+
+                    double duration = (endTime - startTime) / 1_000_000.0;
+                    System.out.println("Linear K-Nearest Neighbors query completed in " + duration + " milliseconds");
+                    System.out.println("Total points found in range: " + queryResults.size());
+                    System.out.println("Results:");
+
+                    for (Record record : queryResults) {
+                        System.out.println(record.toString());
+                    }
+
+                    System.out.println();   // Καθαρό newline
+                    System.out.flush();     // Πλήρες flush της κονσόλας
+                    break;
+
+
+                //      KNN QUERY
+                case "4":
+                    System.out.println("K-Nearest Neighbors Query using R* Tree Index Selected(WIP)");
+                    break;
+
+                //      LINEAR SKYLINE QUERY
+                case "5":
+                    System.out.println("Linear Skyline Query Selected");
+
+                    startTime = System.nanoTime();
+                    queryResults = LinearSkylineQuery.computeSkyline();
+                    endTime = System.nanoTime();
+
+                    duration_in_ms = (endTime - startTime) / 1_000_000.0;
+
+                    System.out.println("Linear Skyline Query completed in " + duration_in_ms + " ms");
+                    System.out.println("Total skyline points: " + queryResults.size());
+                    System.out.println("Records in skyline:");
+
+                    for (Record r : queryResults) {
+                        System.out.println(r.toString());
+                    }
+                    System.out.println();
+
+                    break;
+
+                //      SKYLINE QUERY
+                case "6":
+                    System.out.println("Skyline Query using R* Tree Index Selected (WIP)");
+                    break;
+
+                //      OTHER VALUES
+                default:
+                    System.out.println("Please select a valid query.");
+
+            }
+
+        } while (!selection.equals("0"));
 
     }
 }

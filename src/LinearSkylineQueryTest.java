@@ -17,9 +17,7 @@ public class LinearSkylineQueryTest {
         System.out.println("🌍 Records:");
 
         for (Record r : skyline) {
-            System.out.println(" - ID: " + r.getRecordID() +
-                    ", Name: " + r.getName() +
-                    ", Coords: " + r.getCoordinates());
+            System.out.println(r.toString());
         }
     }
 }

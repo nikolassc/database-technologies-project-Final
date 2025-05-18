@@ -47,9 +47,11 @@ public class Record implements Serializable{
     // Custom output for the records
     @Override
     public String toString() {
-        StringBuilder recordToString = new StringBuilder(recordID + "," + name);
-        for (double c : coor) {
-            recordToString.append(",").append(c);
+        StringBuilder recordToString = new StringBuilder("ID: " + recordID + ", Name: " + name+ ", Coordinates: ");
+        for (int i = 0;  i < coor.size(); i++) {
+            if(i > 0)
+                recordToString.append(", ");
+            recordToString.append(coor.get(i));
         }
         return recordToString.toString();
     }
