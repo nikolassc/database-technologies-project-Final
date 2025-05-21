@@ -53,7 +53,7 @@ public class Main {
             System.out.println("Building R*Tree index from datafile...");
             System.out.println();
             startTime = System.nanoTime();
-            new RStarTree(true);
+            new RStarTree(false);
             endTime = System.nanoTime();
             duration_in_ms = (endTime - startTime);
             System.out.println();

@@ -16,7 +16,7 @@ public class RStarTree {
             ArrayList<RecordBlockPairID> allRecordsPairs = new ArrayList<>();
             int totalBlocks = FilesHandler.getTotalBlocksInDataFile();
 
-            for (int i = 1; i <= totalBlocks; i++) {
+            for (int i = 1; i < totalBlocks; i++) {
                 ArrayList<Record> blockRecords = FilesHandler.readDataFileBlock(i);
                 if (blockRecords != null) {
                     for (Record record : blockRecords) {
