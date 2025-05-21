@@ -249,18 +249,25 @@ class FilesHandler {
             raf.seek(blockId * BLOCK_SIZE);
             byte[] block = new byte[BLOCK_SIZE];
             if (raf.read(block) != BLOCK_SIZE) throw new IOException();
+
             ByteArrayInputStream bais = new ByteArrayInputStream(block);
-            ObjectInputStream ois = new ObjectInputStream(bais);
-            int nodeDataLength = (Integer) ois.readObject();
+
+            byte[] lenBytes = new byte[4];
+            if (bais.read(lenBytes) != 4) throw new IOException("Couldn't read length bytes");
+            int nodeDataLength = ByteBuffer.wrap(lenBytes).getInt();
+
             byte[] nodeBytes = new byte[nodeDataLength];
-            bais.read(nodeBytes);
+            if (bais.read(nodeBytes) != nodeDataLength) throw new IOException("Couldn't read full node data");
+
             ObjectInputStream nodeOis = new ObjectInputStream(new ByteArrayInputStream(nodeBytes));
             return (Node) nodeOis.readObject();
+
         } catch (Exception e) {
             e.printStackTrace();
         }
         return null;
     }
+
 
     static void flushIndexBufferToDisk() {
         try (FileOutputStream fos = new FileOutputStream(PATH_TO_INDEXFILE, false);
