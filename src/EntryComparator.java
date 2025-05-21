@@ -142,6 +142,14 @@ class EntryComparator {
         // Value of the hash-map is the given Entry's BoundingBox distance from the given BoundingBox
         private HashMap<Entry,Double> entryComparisonMap;
 
+        EntryDistanceFromCenterComparator(List<Entry>entriesToCompare, ArrayList<Double> point) {
+            // Initialising Hash-map
+            this.entryComparisonMap = new HashMap<>();
+
+            for (Entry entry : entriesToCompare)
+                entryComparisonMap.put(entry,entry.getBoundingBox().findMinDistanceFromPoint(point));
+        }
+
         EntryDistanceFromCenterComparator(List<Entry>entriesToCompare, MBR MBR) {
             // Initialising Hash-map
             this.entryComparisonMap = new HashMap<>();

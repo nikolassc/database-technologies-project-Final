@@ -222,6 +222,39 @@ public class Main {
                 //      KNN QUERY
                 case "4":
                     System.out.println("K-Nearest Neighbors Query using R* Tree Index Selected(WIP)");
+                    System.out.println("🔎 Executing Sequential Nearest Neighbours Query...");
+                    System.out.print("Enter value for K: ");
+                    int k2 = scanner.nextInt();
+                    scanner.nextLine(); // <-- Απαραίτητο!
+                    int dimensions2 = FilesHandler.getDataDimensions();
+                    ArrayList<Double> queryPoint2 = new ArrayList<>();
+                    System.out.println("Enter coordinates of the query point (you have " + dimensions2 + " dimensions):");
+                    for (int i = 0; i < dimensions2; i++) {
+                        System.out.print("Dimension " + (i + 1) + ": ");
+                        double val = scanner.nextDouble();
+                        scanner.nextLine(); // <-- Απαραίτητο σε κάθε αριθμό!
+                        queryPoint2.add(val);
+                    }
+                    // Run k-NN query
+                    startTime = System.nanoTime();
+                    queryResults = NearestNeighboursQuery.getNearestNeighbours(queryPoint2, k2);
+                    endTime = System.nanoTime();
+                    for (Record record : queryResults)
+                        System.out.print(record.toString());
+
+                    double duration2 = (endTime - startTime) / 1_000_000.0;
+                    System.out.println("K-Nearest Neighbors query completed in " + duration2 + " milliseconds");
+                    System.out.println("Total points found in range: " + queryResults.size());
+                    System.out.println("Results:");
+
+                    for (Record record : queryResults) {
+                        System.out.println(record.toString());
+                    }
+
+                    System.out.println();   // Καθαρό newline
+                    System.out.flush();     // Πλήρες flush της κονσόλας
+
+
                     break;
 
                 //      LINEAR SKYLINE QUERY
