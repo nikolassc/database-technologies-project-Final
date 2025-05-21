@@ -1,51 +1,65 @@
+
 import java.util.*;
+import java.util.PriorityQueue;
+import java.util.Comparator;
+
 
 public class SkylineQuery {
-    static boolean dominates(Record r1, Record r2){
-        boolean strictlyLess = false;
 
-        ArrayList<Double> coords1 = r1.getCoordinates();
-        ArrayList<Double> coords2 = r2.getCoordinates();
+    public static List<Entry> runSkyline(Node root) {
+        List<Entry> skyline = new ArrayList<>();
+        PriorityQueue<Entry> queue = new PriorityQueue<>(new EntryAreaComparator());
 
-        for (int i=0; i<coords1.size(); i++){
-            if (coords1.get(i) > coords2.get(i)){
-                return false;
-            }
-            else if (coords1.get(i) < coords2.get(i)) {
-                strictlyLess = true;
-            }
-        }
+        queue.addAll(root.getEntries());
 
-        return strictlyLess;
-    }
+        while (!queue.isEmpty()) {
+            Entry current = queue.poll();
 
-    static ArrayList<Record> merge(ArrayList<Record> left, ArrayList<Record> right){
-        ArrayList<Record> result = new ArrayList<>(left);
-
-        for (Record r: right){
-            boolean dominated = false;
-            for (Record l: left){
-                if (dominates(l,r)){
-                    dominated = true;
-                    break;
+            if (root.getNodeLevelInTree() == RStarTree.getLeafLevel()) {
+                if (!isDominated(current, skyline)) {
+                    skyline.add(current);
+                }
+            } else {
+                Long childBlockId = current.getChildNodeBlockId();
+                try {
+                    Node child = FilesHandler.readIndexFileBlock(childBlockId);
+                    if (child != null) {
+                        queue.addAll(child.getEntries());
+                    } else {
+                        System.err.println("⚠️ Could not load node at blockId = " + childBlockId + " → skipping.");
+                    }
+                } catch (Exception e) {
+                    System.err.println("❌ Error loading node at blockId = " + childBlockId + ": " + e.getMessage());
                 }
             }
-            if (!dominated){
-                result.add(r);
-            }
         }
 
-        return result;
+        return skyline;
     }
 
-    static ArrayList<Record> divideAndConquer(ArrayList<Record> records){
-        if (records.size() <= 1){
-            return records;
+    private static boolean isDominated(Entry candidate, List<Entry> skyline) {
+        for (Entry other : skyline) {
+            if (dominates(other.getBoundingBox(), candidate.getBoundingBox())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean dominates(MBR a, MBR b) {
+        List<Bounds> boundsA = a.getBounds();
+        List<Bounds> boundsB = b.getBounds();
+
+        boolean atLeastOneBetter = false;
+
+        for (int i = 0; i < boundsA.size(); i++) {
+            double aVal = boundsA.get(i).getLower();
+            double bVal = boundsB.get(i).getLower();
+
+            if (aVal > bVal) return false;
+            if (aVal < bVal) atLeastOneBetter = true;
         }
 
-        int mid = records.size()/2;
-        ArrayList<Record> leftHalf = divideAndConquer((ArrayList<Record>) records.subList(0,mid));
-        ArrayList<Record> rightHalf = divideAndConquer((ArrayList<Record>) records.subList(mid,records.size()));
-        return merge(leftHalf, rightHalf);
+        return atLeastOneBetter;
     }
 }

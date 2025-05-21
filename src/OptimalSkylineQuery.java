@@ -26,6 +26,8 @@ public class OptimalSkylineQuery {
                  for (Record r: records){
                      ArrayList<Double> coords = r.getCoordinates();
                      if (!isDominated(coords, skyline)){
+                         skyline.removeIf(s -> dominates(coords, s.getCoordinates()));
+
                          skyline.add(r);
                      }
                  }
@@ -35,14 +37,7 @@ public class OptimalSkylineQuery {
                  Node childNode = FilesHandler.readIndexFileBlock(childBlockID);
                  if (childNode==null) continue;
                  for (Entry child_entry: childNode.getEntries()){
-                     ArrayList<Bounds> bounds = child_entry.getBoundingBox().getBounds();
-                     ArrayList<Double> minCoords = new ArrayList<>();
-                     for (Bounds b : bounds){
-                         minCoords.add(b.getLower());
-                     }
-                     if (!isDominated(minCoords, skyline)){
-                         queue.add(e);
-                     }
+                     queue.add(child_entry);
                  }
              }
          }

@@ -247,25 +247,28 @@ public class Main {
 
                 //      SKYLINE QUERY
                 case "6":
-                    System.out.println("Skyline Query using R* Tree Index Selected (WIP)");
+
+                    System.out.println("Skyline Query using R* Tree Index (Optimal) Selected");
 
                     startTime = System.nanoTime();
-                    queryResults = OptimalSkylineQuery.computeSkyline();
-                    endTime = System.nanoTime();
 
-                    duration_in_ms = (endTime - startTime) / 1_000_000.0;
+                    ArrayList<Record> skylineResults = OptimalSkylineQuery.computeSkyline();
 
-                    System.out.println("Total skyline points: " + queryResults.size());
+                     endTime = System.nanoTime();
+                    double durationInMs = (endTime - startTime) / 1_000_000.0;
 
-                    for (Record r : queryResults) {
-                        System.out.println(r.toString());
+                    System.out.println("Skyline Query completed in " + durationInMs + " ms");
+                    System.out.println("Total skyline points: " + skylineResults.size());
+                    System.out.println("Skyline Records:");
+
+                    for (Record r : skylineResults) {
+                        System.out.println(r);
                     }
-                    System.out.println();
-                    System.out.println("Records in skyline:");
-                    System.out.println("Skyline Query using R*Tree index completed in " + duration_in_ms + " ms");
-                    System.out.println();
 
+                    System.out.println();
                     break;
+
+
 
                 //      OTHER VALUES
                 default:
