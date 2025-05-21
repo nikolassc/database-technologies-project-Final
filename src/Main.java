@@ -12,7 +12,7 @@ public class Main {
         Scanner scanner = new Scanner(System.in);
 
         if (filesExist) {
-            System.out.println("Existed data-file and index-file found.");
+            System.out.println("Data-file and index-file already exist");
             System.out.print("Do you want to make new ones based on the data of the " + FilesHandler.getPathToCsv() +  " file? (y/n): ");
             String answer;
             while (true)
@@ -45,6 +45,21 @@ public class Main {
         FilesHandler.initializeDataFile(dataDimensions, resetFiles);
         FilesHandler.initializeIndexFile(dataDimensions, resetFiles);
 
+        double duration_in_ms;
+        long startTime;
+        long endTime;
+
+        if(insertRecordsFromDataFile) {
+            System.out.println("Building R*Tree index from datafile...");
+            startTime = System.nanoTime();
+            new RStarTree(true);
+            endTime = System.nanoTime();
+            duration_in_ms = (endTime - startTime);
+            System.out.println("R*Tree index built in " +duration_in_ms / 1000000.0 + "ms");
+        }
+        System.out.println("Datafile Metadata: " + FilesHandler.getDataMetaData());
+        System.out.println("Index Metadata: " + FilesHandler.getIndexMetaData());
+
         String selection;
         do {
             System.out.println("Please select a query you would like to execute: \n" +
@@ -59,11 +74,10 @@ public class Main {
             System.out.println();
 
             // Initializing variables for queries
-            double duration_in_ms;
-            long startTime;
-            long endTime;
             ArrayList<Record> queryResults;
-
+            ArrayList<Bounds> boundsList;
+            int dims;
+            MBR queryMBR;
 
             switch (selection) {
 
@@ -77,8 +91,8 @@ public class Main {
                     System.out.println("Linear Range Query Selected");
 
                     //Runs for more than 2 dimensions if needed
-                    ArrayList<Bounds> boundsList = new ArrayList<>();
-                    int dims = FilesHandler.getDataDimensions();
+                    boundsList = new ArrayList<>();
+                    dims = FilesHandler.getDataDimensions();
 
                     System.out.println("Give Lower and Upper bounds for the Query MBR for each dimension: ");
                     for (int i = 0; i < dims; i++) {
@@ -96,7 +110,7 @@ public class Main {
                         }
                     }
 
-                    MBR queryMBR = new MBR(boundsList);
+                    queryMBR = new MBR(boundsList);
                     startTime = System.nanoTime();
                     queryResults = LinearRangeQuery.runLinearRangeQuery(queryMBR);
                     endTime = System.nanoTime();
@@ -118,6 +132,40 @@ public class Main {
                 //      RANGE QUERY
                 case "2":
                     System.out.println("Range Query using R* Tree index Selected(WIP)");
+                    boundsList = new ArrayList<>();
+                    dims = FilesHandler.getDataDimensions();
+
+
+                    System.out.println("Give Lower and Upper bounds for the Query MBR for each dimension: ");
+                    for (int i = 0; i < dims; i++) {
+                        while (true) {
+                            System.out.print("Give bounds for dimension " + (i + 1) + " (lower Bound First): ");
+                            double lower = scanner.nextDouble();
+                            double upper = scanner.nextDouble();
+
+                            if (lower <= upper) {
+                                boundsList.add(new Bounds(lower, upper));
+                                break;
+                            } else {
+                                System.out.println("Lower bound must be less than or equal to upper bound. Try again.");
+                            }
+                        }
+                    }
+
+                    queryMBR = new MBR(boundsList);
+                    startTime = System.nanoTime();
+                    queryResults = RangeQuery.rangeQuery(new Node(FilesHandler.getTotalLevelsFile()), queryMBR);
+                    endTime = System.nanoTime();
+                    duration_in_ms = (endTime - startTime) / 1000000.0;
+
+
+                    for (Record record : queryResults) {
+                        System.out.println(record.toString());
+                    }
+                    System.out.println("Range Query completed in " + duration_in_ms + " milliseconds");
+                    System.out.println("Total points found in range: " + queryResults.size());
+                    System.out.println("Results:");
+
                     break;
 
                 //      LINEAR KNN QUERY

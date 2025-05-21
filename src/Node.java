@@ -1,28 +1,29 @@
 import java.io.Serializable;
 import java.util.ArrayList;
-import java.util.List;
 
+// Class representing a Node of the RStarTree
+class Node implements Serializable {
+    private static final int MAX_ENTRIES = 5; //FilesHandler.calculateMaxEntries(); // The maximum entries that a Node can fit based on the file parameters
+    private static final int MIN_ENTRIES = (int)(0.5 * MAX_ENTRIES); // Setting m to 50%
+    private int level; // The level of the tree that this Node is located
+    private long blockId; // The unique ID of the file block that this Node refers to
+    private ArrayList<Entry> entries; // The ArrayList with the Entries of the Node
 
-public class Node implements Serializable {
-    private static final int MAX_ENTRIES = FilesHandler.calculateMaxEntriesInNode(); // Max entries that fit in a Node
-    private static final int MIN_ENTRIES = (int) (0.5 * MAX_ENTRIES); // Every node fills to 50%
-    private int nodeLevelInTree; // The level in tree that the nods is
-    private long nodeBlockId; // The id of the file block that contains this node
-    private ArrayList<Entry> entries; // The entries in the Node
-
+    // Root constructor with it's level as a parameter which makes a new empty ArrayList for the Node
     Node(int level) {
-        nodeLevelInTree = level;
+        this.level = level;
         this.entries = new ArrayList<>();
-        this.nodeBlockId = RStarTree.getRootNodeBlockId();
+        this.blockId = RStarTree.getRootNodeBlockId();
     }
 
+    // Node constructor with level and entries parameters
     Node(int level, ArrayList<Entry> entries) {
-        nodeLevelInTree = level;
+        this.level = level;
         this.entries = entries;
     }
 
-    void setNodeBlockId(long nodeBlockId) {
-        this.nodeBlockId = nodeBlockId;
+    void setNodeBlockId(int blockId) {
+        this.blockId = blockId;
     }
 
     void setEntries(ArrayList<Entry> entries) {
@@ -34,125 +35,141 @@ public class Node implements Serializable {
     }
 
     long getNodeBlockId() {
-        return nodeBlockId;
+        return blockId;
     }
 
     int getNodeLevelInTree() {
-        return nodeLevelInTree;
+        return level;
     }
 
     ArrayList<Entry> getEntries() {
         return entries;
     }
 
-    // Inserts entry to node
-    void insertEntry(Entry entry) {
+    // Adds the given entry to the entries ArrayList of the Node
+    void insertEntry(Entry entry)
+    {
         entries.add(entry);
     }
 
+    // Splits the entries of the Node and divides them to two new Nodes
+    // Returns an ArrayList which
     ArrayList<Node> splitNode() {
-        ArrayList<Distribution> splitDistributions = chooseSplitNodes();
-        return chooseSplitIndex(splitDistributions);
+        ArrayList<Distribution> splitAxisDistributions = chooseSplitAxis();
+        return chooseSplitIndex(splitAxisDistributions);
     }
 
-    private ArrayList<Distribution> chooseSplitNodes() {
-        ArrayList<Distribution> bestDistributions = new ArrayList<>();
-        double minMarginSum = Double.MAX_VALUE;
+    // Returns the distributions of the best Axis
+    private ArrayList<Distribution> chooseSplitAxis() {
+        // For each axis sort the entries by the lower then by the upper
+        // value of their rectangles and determine all distributions as described above Compute S which is the
+        // sum of all margin-values of the different distributions
 
-        for (int dimension = 0; dimension < FilesHandler.getDataDimensions(); dimension++) {
-            ArrayList<ArrayList<Entry>> sortedLists = getSortedEntries(entries, dimension);
-            double totalMarginSum = 0;
-            ArrayList<Distribution> currentDistributions = new ArrayList<>();
+        ArrayList<Distribution> splitAxisDistributions = new ArrayList<>(); // for the different distributions
+        double splitAxisMarginsSum = Double.MAX_VALUE;
+        for (int d = 0; d < FilesHandler.getDataDimensions(); d++)
+        {
+            ArrayList<Entry> entriesSortedByUpper = new ArrayList<>();
+            ArrayList<Entry> entriesSortedByLower = new ArrayList<>();
 
-            for (ArrayList<Entry> sortedEntries : sortedLists) {
-                ArrayList<Distribution> distributions = computeDistributions(sortedEntries);
-                for (Distribution dist : distributions) {
-                    totalMarginSum += dist.getFirstGroup().getBoundingBox().getMargin();
-                    totalMarginSum += dist.getSecondGroup().getBoundingBox().getMargin();
+            for (Entry entry : entries)
+            {
+                entriesSortedByLower.add(entry);
+                entriesSortedByUpper.add(entry);
+            }
+
+            entriesSortedByLower.sort(new EntryComparator.EntryBoundComparator(entriesSortedByLower,d,false));
+            entriesSortedByUpper.sort(new EntryComparator.EntryBoundComparator(entriesSortedByUpper,d,true));
+
+            ArrayList<ArrayList<Entry>> sortedEntries = new ArrayList<>();
+            sortedEntries.add(entriesSortedByLower);
+            sortedEntries.add(entriesSortedByUpper);
+
+            double sumOfMargins = 0;
+            ArrayList<Distribution>  distributions = new ArrayList<>();
+            // Determining distributions
+            // Total number of different distributions = M-2*m+2 for each sorted vector
+            for (ArrayList<Entry> sortedEntryList: sortedEntries)
+            {
+                for (int k = 1; k <= MAX_ENTRIES - 2* MIN_ENTRIES +2; k++)
+                {
+                    ArrayList<Entry> firstGroup = new ArrayList<>();
+                    ArrayList<Entry> secondGroup = new ArrayList<>();
+                    // The first group contains the first (m-l)+k entries, the second group contains the remaining entries
+                    for (int j = 0; j < (MIN_ENTRIES -1)+k; j++)
+                        firstGroup.add(sortedEntryList.get(j));
+                    for (int j = (MIN_ENTRIES -1)+k; j < entries.size(); j++)
+                        secondGroup.add(sortedEntryList.get(j));
+
+                    MBR bbFirstGroup = new MBR(Bounds.findMinimumBounds(firstGroup));
+                    MBR bbSecondGroup = new MBR(Bounds.findMinimumBounds(secondGroup));
+
+                    Distribution distribution = new Distribution(new DistributionGroup(firstGroup,bbFirstGroup), new DistributionGroup(secondGroup,bbSecondGroup));
+                    distributions.add(distribution);
+                    sumOfMargins += bbFirstGroup.getMargin() + bbSecondGroup.getMargin();
                 }
-                currentDistributions.addAll(distributions);
-            }
 
-            if (totalMarginSum < minMarginSum) {
-                minMarginSum = totalMarginSum;
-                bestDistributions = currentDistributions;
+                // Choose the axis with the minimum sum as split axis
+                if (splitAxisMarginsSum > sumOfMargins)
+                {
+                    // bestSplitAxis = d;
+                    splitAxisMarginsSum = sumOfMargins;
+                    splitAxisDistributions = distributions;
+                }
             }
         }
-
-        return bestDistributions;
+        return splitAxisDistributions;
     }
 
-    private ArrayList<ArrayList<Entry>> getSortedEntries(ArrayList<Entry> originalEntries, int dimension) {
-        ArrayList<Entry> byLower = new ArrayList<>(originalEntries);
-        ArrayList<Entry> byUpper = new ArrayList<>(originalEntries);
-
-        byLower.sort(new EntryComparator.EntryBoundComparator(byLower, dimension, false));
-        byUpper.sort(new EntryComparator.EntryBoundComparator(byUpper, dimension, true));
-
-        ArrayList<ArrayList<Entry>> result = new ArrayList<>();
-        result.add(byLower);
-        result.add(byUpper);
-        return result;
-    }
-
-    private ArrayList<Distribution> computeDistributions(ArrayList<Entry> sortedEntries) {
-        ArrayList<Distribution> distributions = new ArrayList<>();
-        int total = sortedEntries.size();
-
-        int maxK = MAX_ENTRIES - 2 * MIN_ENTRIES + 2;
-        for (int k = 1; k <= maxK; k++) {
-            int splitIndex = (MIN_ENTRIES - 1) + k;
-            if (splitIndex >= total) break; // prevent out-of-bounds
-
-            List<Entry> group1 = sortedEntries.subList(0, splitIndex);
-            List<Entry> group2 = sortedEntries.subList(splitIndex, total);
-
-            MBR bb1 = new MBR(Bounds.findMinimumBounds((ArrayList<Entry>) group1));
-            MBR bb2 = new MBR(Bounds.findMinimumBounds((ArrayList<Entry>) group2));
-
-            distributions.add(new Distribution(
-                    new DistributionGroup(new ArrayList<>(group1), bb1),
-                    new DistributionGroup(new ArrayList<>(group2), bb2)
-            ));
-        }
-        return distributions;
-    }
-
+    // Returns a vector of Nodes, containing the two nodes that occurred from the split
     private ArrayList<Node> chooseSplitIndex(ArrayList<Distribution> splitAxisDistributions) {
-        if (splitAxisDistributions.isEmpty()) {
-            throw new IllegalArgumentException("No distributions provided for split.");
-        }
 
-        double minOverlap = Double.MAX_VALUE;
-        double minArea = Double.MAX_VALUE;
-        int bestIndex = -1;
+        if (splitAxisDistributions.size() == 0)
+            throw new IllegalArgumentException("Wrong distributions group size. Given 0");
 
-        for (int i = 0; i < splitAxisDistributions.size(); i++) {
-            Distribution dist = splitAxisDistributions.get(i);
-            MBR bb1 = dist.getFirstGroup().getBoundingBox();
-            MBR bb2 = dist.getSecondGroup().getBoundingBox();
+        double minOverlapValue = Double.MAX_VALUE;
+        double minAreaValue = Double.MAX_VALUE;
+        int bestDistributionIndex = 0;
+        // Along the chosen split axis, choose the
+        // distribution with the minimum overlap value
+        for (int i = 0; i < splitAxisDistributions.size(); i++)
+        {
+            DistributionGroup distributionFirstGroup = splitAxisDistributions.get(i).getFirstGroup();
+            DistributionGroup distributionSecondGroup = splitAxisDistributions.get(i).getSecondGroup();
 
-            double overlap = MBR.calculateOverlapValue(bb1, bb2);
-            double areaSum = bb1.getArea() + bb2.getArea();
-
-            if (overlap < minOverlap || (overlap == minOverlap && areaSum < minArea)) {
-                minOverlap = overlap;
-                minArea = areaSum;
-                bestIndex = i;
+            double overlap = MBR.calculateOverlapValue(distributionFirstGroup.getMBR(), distributionSecondGroup.getMBR());
+            if(minOverlapValue > overlap)
+            {
+                minOverlapValue = overlap;
+                minAreaValue = distributionFirstGroup.getMBR().getArea() + distributionSecondGroup.getMBR().getArea();
+                bestDistributionIndex = i;
+            }
+            // Resolve ties by choosing the distribution with minimum area-value
+            else if (minOverlapValue == overlap)
+            {
+                double area = distributionFirstGroup.getMBR().getArea() + distributionSecondGroup.getMBR().getArea() ;
+                if(minAreaValue > area)
+                {
+                    minAreaValue = area;
+                    bestDistributionIndex = i;
+                }
             }
         }
-
-        Distribution best = splitAxisDistributions.get(bestIndex);
-        ArrayList<Node> result = new ArrayList<>();
-        result.add(new Node(nodeLevelInTree, best.getFirstGroup().getEntries()));
-        result.add(new Node(nodeLevelInTree, best.getSecondGroup().getEntries()));
-        return result;
+        ArrayList<Node> splitNodes = new ArrayList<>();
+        DistributionGroup firstGroup = splitAxisDistributions.get(bestDistributionIndex).getFirstGroup();
+        DistributionGroup secondGroup = splitAxisDistributions.get(bestDistributionIndex).getSecondGroup();
+        splitNodes.add(new Node(level,firstGroup.getEntries()));
+        splitNodes.add(new Node(level,secondGroup.getEntries()));
+        return splitNodes;
     }
+
+
 }
 
 
 
-    class Distribution {
+
+class Distribution {
     private DistributionGroup firstGroup;
     private DistributionGroup secondGroup;
 
@@ -183,7 +200,7 @@ class DistributionGroup {
         return entries;
     }
 
-    MBR getBoundingBox(){
+    MBR getMBR(){
         return MBR;
     }
 }

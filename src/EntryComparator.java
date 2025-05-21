@@ -156,25 +156,5 @@ class EntryComparator {
         }
     }
 
-    // Class used to compare entries by their distance from a point
-    static class EntryDistanceFromPointComparator implements Comparator<Entry>
-    {
-        // Hash-map  used for mapping the comparison value of the Entries during the compare method
-        // Key of the hash-map is the given Entry
-        // Value of the hash-map is the given Entry's BoundingBox distance from the given point
-        private HashMap<Entry,Double> entryComparisonMap;
 
-        EntryDistanceFromPointComparator(List<Entry> entriesToCompare, ArrayList<Double> point) {
-            // Initialising Hash-map
-            this.entryComparisonMap = new HashMap<>();
-
-            for (Entry entry : entriesToCompare)
-                entryComparisonMap.put(entry,entry.getBoundingBox().findMinDistanceFromPoint(point));
-        }
-
-        public int compare(Entry entryA, Entry entryB)
-        {
-            return Double.compare(entryComparisonMap.get(entryA),entryComparisonMap.get(entryB));
-        }
-    }
 }

@@ -1,24 +1,33 @@
 import java.util.ArrayList;
-import java.util.List;
 
 public class RangeQuery {
 
     /**
-     * Executes a range query using the R*-Tree structure, starting from the given node.
-     * Traverses the index file (indexfile.dat) to find relevant data blocks in the data file.
+     * Executes a range query using the R*-Tree structure recursively.
+     * Traverses only branches whose MBRs overlap with the query MBR.
      */
-    public static List<Record> rangeQuery(Node node, double[] minCoor, double[] maxCoor) {
-        List<Record> results = new ArrayList<>();
+    public static ArrayList<Record> rangeQuery(Node node, MBR queryMBR) {
+        ArrayList<Record> results = new ArrayList<>();
 
-        // Create the query MBR (bounding box)
-        MBR queryBox = new MBR(getBoundsFromMinMax(minCoor, maxCoor));
+        int dimensions = FilesHandler.getDataDimensions();
+        double[] minCoor = new double[dimensions];
+        double[] maxCoor = new double[dimensions];
+
+        // Extract min and max coordinates from query MBR
+        ArrayList<Bounds> boundsList = queryMBR.getBounds();
+        for (int i = 0; i < dimensions; i++) {
+            Bounds b = boundsList.get(i);
+            minCoor[i] = b.getLower();
+            maxCoor[i] = b.getUpper();
+        }
 
         for (Entry entry : node.getEntries()) {
-            // If entry's bounding box overlaps with the query box
-            if (MBR.checkOverlap(entry.getBoundingBox(), queryBox)) {
+            MBR entryMBR = entry.getBoundingBox();
 
-                if (node.getNodeLevelInTree() == 0) {
-                    // Leaf node: retrieve records from the associated data block
+            // If the entry MBR overlaps the query MBR
+            if (MBR.checkOverlap(entryMBR, queryMBR)) {
+                if (node.getNodeLevelInTree() == RStarTree.getLeafLevel()) {
+                    // Leaf node → entry points to a data block
                     ArrayList<Record> records = FilesHandler.readDataFileBlock(entry.getChildNodeBlockId());
                     if (records != null) {
                         for (Record record : records) {
@@ -28,10 +37,10 @@ public class RangeQuery {
                         }
                     }
                 } else {
-                    // Internal node: go deeper into the index file
+                    // Internal node → go deeper
                     Node childNode = FilesHandler.readIndexFileBlock(entry.getChildNodeBlockId());
                     if (childNode != null) {
-                        results.addAll(rangeQuery(childNode, minCoor, maxCoor));
+                        results.addAll(rangeQuery(childNode, queryMBR));
                     }
                 }
             }
@@ -41,29 +50,16 @@ public class RangeQuery {
     }
 
     /**
-     * Builds a list of Bounds from given min/max arrays for each dimension.
-     */
-    private static ArrayList<Bounds> getBoundsFromMinMax(double[] minCoor, double[] maxCoor) {
-        ArrayList<Bounds> bounds = new ArrayList<>();
-        for (int i = 0; i < minCoor.length; i++) {
-            bounds.add(new Bounds(minCoor[i], maxCoor[i]));
-        }
-        return bounds;
-    }
-
-    /**
-     * Checks whether a record lies within the query range.
+     * Checks whether a record lies within the query MBR (using min/max arrays).
      */
     private static boolean isRecordInRange(Record record, double[] minCoor, double[] maxCoor) {
         ArrayList<Double> coords = record.getCoordinates();
         for (int i = 0; i < coords.size(); i++) {
-            if (coords.get(i) < minCoor[i] || coords.get(i) > maxCoor[i]) {
+            double val = coords.get(i);
+            if (val < minCoor[i] || val > maxCoor[i]) {
                 return false;
             }
         }
         return true;
     }
 }
-
-
-

@@ -1,5 +1,7 @@
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedList;
+import java.util.Queue;
 import java.util.stream.Collectors;
 
 public class RStarTree {
@@ -9,50 +11,49 @@ public class RStarTree {
     private static final int ROOT_NODE_BLOCK_ID = 1;
     private static final int LEAF_LEVEL = 1;
     private static final int CHOOSE_SUBTREE_LEVEL = 32;
-    private static final int REINSERT_TREE_ENTRIES = (int) (0.5* Node.getMaxEntriesInNode());
+    private static final int REINSERT_TREE_ENTRIES = (int) (0.2 * Node.getMaxEntriesInNode());
 
-
-    //Constructor
-
-    RStarTree(boolean insertFromDataFile){
+    RStarTree(boolean insertFromDataFile) {
         this.totalLevels = FilesHandler.getTotalLevelsFile();
-        if(insertFromDataFile) {
-            FilesHandler.writeNewIndexFileBlock(new Node(1));
-
-            for (int i = 1; i <= FilesHandler.getTotalBlocksInDataFile(); i++) {
+        if (insertFromDataFile) {
+            Node root = new Node(1);
+            FilesHandler.writeNewIndexFileBlock(root);
+            for (int i = 1; i < FilesHandler.getTotalBlocksInDataFile(); i++) {
                 ArrayList<Record> records = FilesHandler.readDataFileBlock(i);
-                if(records != null){
+                if (records != null) {
                     for (Record record : records) {
-                        insertRecord(record,i);
+                        insertRecord(record, i);
                     }
                 } else {
                     throw new IllegalStateException("Error reading records from datafile");
                 }
             }
+            FilesHandler.flushIndexBufferToDisk();
+            System.out.println("✅ Total levels after insertion: " + totalLevels);
         }
     }
 
-    Node getRootNode(){
+    Node getRootNode() {
         return FilesHandler.readIndexFileBlock(ROOT_NODE_BLOCK_ID);
     }
 
-    static int getRootNodeBlockId(){
+    static int getRootNodeBlockId() {
         return ROOT_NODE_BLOCK_ID;
     }
 
-    static int getLeafLevel(){
+    static int getLeafLevel() {
         return LEAF_LEVEL;
     }
 
-    private void insertRecord(Record record, long datafileBlockId){
+    private void insertRecord(Record record, long datafileBlockId) {
         ArrayList<Bounds> boundsForDimensions = new ArrayList<>();
-
         for (int i = 0; i < FilesHandler.getDataDimensions(); i++) {
+
             boundsForDimensions.add(new Bounds(record.getCoordinateFromDimension(i), record.getCoordinateFromDimension(i)));
         }
-        levelsInserted = new boolean[totalLevels];
-        insert(null, null, new LeafEntry(record.getRecordID(), datafileBlockId, boundsForDimensions), LEAF_LEVEL);
 
+        this.levelsInserted = new boolean[totalLevels];
+        insert(null, null, new LeafEntry(record.getRecordID(), datafileBlockId, boundsForDimensions), LEAF_LEVEL);
     }
 
     private Entry insert(Node parentNode, Entry parentEntry, Entry dataEntry, int levelToAdd) {
@@ -65,24 +66,23 @@ public class RStarTree {
 
         Node childNode = FilesHandler.readIndexFileBlock(nodeBlockId);
         if (childNode == null) {
-            throw new IllegalStateException("The Node-block read from file is null");
+            throw new IllegalStateException("Node-block is null");
         }
 
-        // Case: Target level reached -> insert directly into this node
+        if (levelToAdd > totalLevels) {
+            totalLevels = levelToAdd;
+            boolean[] newLevelsInserted = new boolean[totalLevels];
+            if (levelsInserted != null)
+                System.arraycopy(levelsInserted, 0, newLevelsInserted, 0, levelsInserted.length);
+            levelsInserted = newLevelsInserted;
+        }
+
         if (childNode.getNodeLevelInTree() == levelToAdd) {
             childNode.insertEntry(dataEntry);
             FilesHandler.updateIndexFileBlock(childNode, totalLevels);
-        }
-        // Case: Recurse further down the tree
-        else {
+        } else {
             Entry bestEntry = chooseSubTree(childNode, dataEntry.getBoundingBox(), levelToAdd);
             Entry newEntry = insert(childNode, bestEntry, dataEntry, levelToAdd);
-
-            // Read updated child node again in case it was modified during recursion
-            childNode = FilesHandler.readIndexFileBlock(nodeBlockId);
-            if (childNode == null) {
-                throw new IllegalStateException("The Node-block read from file is null after recursion");
-            }
 
             if (newEntry != null) {
                 childNode.insertEntry(newEntry);
@@ -90,16 +90,13 @@ public class RStarTree {
 
             FilesHandler.updateIndexFileBlock(childNode, totalLevels);
 
-            // No further overflow, return nothing
             if (childNode.getEntries().size() <= Node.getMaxEntriesInNode()) {
                 return null;
             }
 
-            // Overflow treatment needed
             return overFlowTreatment(parentNode, parentEntry, childNode);
         }
 
-        // Final overflow check (leaf case)
         if (childNode.getEntries().size() > Node.getMaxEntriesInNode()) {
             return overFlowTreatment(parentNode, parentEntry, childNode);
         }
@@ -109,19 +106,14 @@ public class RStarTree {
 
     private Entry chooseSubTree(Node node, MBR MBRToAdd, int levelToAdd) {
         ArrayList<Entry> entries = node.getEntries();
-
-        // Case 1: Child points to leaves
-        if(node.getNodeLevelInTree() == levelToAdd + 1){
-            if (Node.getMaxEntriesInNode() > (CHOOSE_SUBTREE_LEVEL * 2) / 3 && entries.size() >CHOOSE_SUBTREE_LEVEL) {
+        if (node.getNodeLevelInTree() == levelToAdd + 1) {
+            if (Node.getMaxEntriesInNode() > (CHOOSE_SUBTREE_LEVEL * 2) / 3 && entries.size() > CHOOSE_SUBTREE_LEVEL) {
                 ArrayList<Entry> topEntries = getTopAreaEnlargementEntries(entries, MBRToAdd, CHOOSE_SUBTREE_LEVEL);
                 return Collections.min(topEntries, new EntryComparator.EntryOverlapEnlargementComparator(topEntries, MBRToAdd, entries));
             }
             return Collections.min(entries, new EntryComparator.EntryOverlapEnlargementComparator(entries, MBRToAdd, entries));
         }
-
-        // Case 2: Internal node -- pick based only on area enlargement
         return getEntryWithMinAreaEnlargement(entries, MBRToAdd);
-
     }
 
     private Entry getEntryWithMinAreaEnlargement(ArrayList<Entry> entries, MBR mbr) {
@@ -149,15 +141,18 @@ public class RStarTree {
 
     private Entry overFlowTreatment(Node parentNode, Entry parentEntry, Node childNode) {
         int levelIndex = childNode.getNodeLevelInTree() - 1;
+        if (levelIndex >= levelsInserted.length) {
+            boolean[] newLevelsInserted = new boolean[totalLevels];
+            System.arraycopy(levelsInserted, 0, newLevelsInserted, 0, levelsInserted.length);
+            levelsInserted = newLevelsInserted;
+        }
 
-        // Case 1: Reinsertion (only once per level during this insertion)
         if (childNode.getNodeBlockId() != ROOT_NODE_BLOCK_ID && !levelsInserted[levelIndex]) {
             levelsInserted[levelIndex] = true;
             reInsert(parentNode, parentEntry, childNode);
             return null;
         }
 
-        // Case 2: Split the overflowing node
         ArrayList<Node> splitNodes = childNode.splitNode();
         if (splitNodes.size() != 2) {
             throw new IllegalStateException("Split must produce exactly two nodes.");
@@ -165,22 +160,18 @@ public class RStarTree {
 
         Node leftNode = splitNodes.get(0);
         Node rightNode = splitNodes.get(1);
-        childNode.setEntries(leftNode.getEntries()); // update current node with left part
+        childNode.setEntries(leftNode.getEntries());
 
         if (childNode.getNodeBlockId() != ROOT_NODE_BLOCK_ID) {
-            // Regular internal/leaf node split
             FilesHandler.updateIndexFileBlock(childNode, totalLevels);
-
             rightNode.setNodeBlockId(FilesHandler.getTotalBlocksInIndexFile());
             FilesHandler.writeNewIndexFileBlock(rightNode);
-
             parentEntry.adjustBBToFitEntries(childNode.getEntries());
             FilesHandler.updateIndexFileBlock(parentNode, totalLevels);
-
+            System.out.println("SPLIT at level: " + childNode.getNodeLevelInTree() );
             return new Entry(rightNode);
         }
 
-        // Case 3: Split occurred at root — create a new root
         childNode.setNodeBlockId(FilesHandler.getTotalBlocksInIndexFile());
         FilesHandler.writeNewIndexFileBlock(childNode);
 
@@ -191,9 +182,11 @@ public class RStarTree {
         newRootEntries.add(new Entry(childNode));
         newRootEntries.add(new Entry(rightNode));
 
-        Node newRoot = new Node(++totalLevels, newRootEntries);
+        Node newRoot = new Node(childNode.getNodeLevelInTree()+1, newRootEntries);
         newRoot.setNodeBlockId(ROOT_NODE_BLOCK_ID);
+        FilesHandler.setLevelsOfTreeIndex(++totalLevels);
         FilesHandler.updateIndexFileBlock(newRoot, totalLevels);
+        System.out.println("newRootCreated at level: " + totalLevels);
 
         return null;
     }
@@ -206,29 +199,25 @@ public class RStarTree {
             throw new IllegalStateException("Reinsert requires exactly M+1 entries.");
         }
 
-        // Sort entries by distance to the center of the parent entry's bounding box (close reinsertion)
         childNode.getEntries().sort(
                 new EntryComparator.EntryDistanceFromCenterComparator(childNode.getEntries(), parentEntry.getBoundingBox())
         );
 
-        // Separate entries to remove
         int start = totalEntries - REINSERT_TREE_ENTRIES;
         ArrayList<Entry> removedEntries = new ArrayList<>(childNode.getEntries().subList(start, totalEntries));
-
-        // Remove the last p entries
         childNode.getEntries().subList(start, totalEntries).clear();
 
-        // Update bounding box and persist changes
         parentEntry.adjustBBToFitEntries(childNode.getEntries());
         FilesHandler.updateIndexFileBlock(parentNode, totalLevels);
         FilesHandler.updateIndexFileBlock(childNode, totalLevels);
 
-        // Reinsert removed entries (close reinsertion)
-        for (Entry entry : removedEntries) {
-            insert(null, null, entry, childNode.getNodeLevelInTree());
+        Queue<Entry> reinsertQueue = new LinkedList<>(removedEntries);
+        while (!reinsertQueue.isEmpty()) {
+            insert(null, null, reinsertQueue.poll(), childNode.getNodeLevelInTree());
         }
     }
 }
+
 
 
 
