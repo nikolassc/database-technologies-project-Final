@@ -38,8 +38,11 @@ public class RStarTree {
                     throw new IllegalStateException("Error reading records from datafile");
                 }
             }
+            printTreeStats();
             FilesHandler.flushIndexBufferToDisk();
+
             System.out.println("✅ Total levels after insertion: " + totalLevels);
+            printTreeStats();
         }
     }
 
@@ -236,7 +239,7 @@ public class RStarTree {
                     int level = entry.getKey();
                     int count = entry.getValue();
                     String label = (level == RStarTree.getLeafLevel()) ? "Leaf" :
-                            (level == RStarTree.getRootNodeBlockId()) ? "Root" : "Internal";
+                            (level == FilesHandler.getTotalLevelsFile()) ? "Root" : "Internal";
                     System.out.printf("Level %d (%s): %d node(s)%n", level, label, count);
                 });
     }
