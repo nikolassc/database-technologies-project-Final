@@ -162,7 +162,10 @@ class FilesHandler {
             if (actuallyRead != recordDataLength)
                 throw new IOException("Could not read full record data");
             ObjectInputStream recordOis = new ObjectInputStream(new ByteArrayInputStream(recordBytes));
-            return (ArrayList<Record>) recordOis.readObject();
+            ArrayList<Record> records = (ArrayList<Record>) recordOis.readObject();
+            for (Record record : records)
+                record.setBlockID(blockID);
+            return records;
         } catch (Exception e) {
             e.printStackTrace();
         }
