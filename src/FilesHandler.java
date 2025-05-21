@@ -113,7 +113,7 @@ class FilesHandler {
             if (lengthInBytes.length + recordInBytes.length > BLOCK_SIZE)
                 break;
         }
-        System.out.println("Max records ina blocks: " + (i-1));
+        System.out.println("Max records in a block: " + (i-1));
         return i - 1;
     }
 

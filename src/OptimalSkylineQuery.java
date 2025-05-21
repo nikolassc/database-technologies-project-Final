@@ -3,7 +3,7 @@ import java.nio.file.Files;
 import java.util.*;
 
 public class OptimalSkylineQuery {
-     public ArrayList<Record> computeSkyline(){
+     public static ArrayList<Record> computeSkyline(){
          ArrayList<Record> skyline = new ArrayList<>();
 
          long rootBlockID = RStarTree.getRootNodeBlockId();

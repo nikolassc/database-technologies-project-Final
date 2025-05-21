@@ -51,10 +51,12 @@ public class Main {
 
         if(insertRecordsFromDataFile) {
             System.out.println("Building R*Tree index from datafile...");
+            System.out.println();
             startTime = System.nanoTime();
             new RStarTree(true);
             endTime = System.nanoTime();
             duration_in_ms = (endTime - startTime);
+            System.out.println();
             System.out.println("R*Tree index built in " +duration_in_ms / 1000000.0 + "ms");
         }
         ArrayList<Integer> dataMetaData = FilesHandler.getDataMetaData();
@@ -125,13 +127,13 @@ public class Main {
                     endTime = System.nanoTime();
                     duration_in_ms = (endTime - startTime) / 1000000.0;
 
-                    System.out.println("Linear Range query completed in " + duration_in_ms + " milliseconds");
-                    System.out.println("Total points found in range: " + queryResults.size());
                     System.out.println("Results:");
 
                     for (Record record : queryResults) {
                         System.out.println(record.toString());
                     }
+                    System.out.println("Linear Range query completed in " + duration_in_ms + " milliseconds");
+                    System.out.println("Total points found in range: " + queryResults.size());
 
                     System.out.println();
 
@@ -163,17 +165,19 @@ public class Main {
 
                     queryMBR = new MBR(boundsList);
                     startTime = System.nanoTime();
-                    queryResults = RangeQuery.rangeQuery(new Node(FilesHandler.getTotalLevelsFile()), queryMBR);
+                    queryResults = RangeQuery.rangeQuery(FilesHandler.readIndexFileBlock(RStarTree.getRootNodeBlockId()), queryMBR);
                     endTime = System.nanoTime();
                     duration_in_ms = (endTime - startTime) / 1000000.0;
 
 
+                    System.out.println("Results:");
                     for (Record record : queryResults) {
                         System.out.println(record.toString());
                     }
                     System.out.println("Range Query completed in " + duration_in_ms + " milliseconds");
                     System.out.println("Total points found in range: " + queryResults.size());
-                    System.out.println("Results:");
+                    System.out.println();
+
 
                     break;
 
@@ -202,13 +206,13 @@ public class Main {
                     endTime = System.nanoTime();
 
                     double duration = (endTime - startTime) / 1_000_000.0;
-                    System.out.println("Linear K-Nearest Neighbors query completed in " + duration + " milliseconds");
-                    System.out.println("Total points found in range: " + queryResults.size());
                     System.out.println("Results:");
 
                     for (Record record : queryResults) {
                         System.out.println(record.toString());
                     }
+                    System.out.println("Linear K-Nearest Neighbors query completed in " + duration + " milliseconds");
+                    System.out.println("Total points found in range: " + queryResults.size());
 
                     System.out.println();   // Καθαρό newline
                     System.out.flush();     // Πλήρες flush της κονσόλας
@@ -230,13 +234,13 @@ public class Main {
 
                     duration_in_ms = (endTime - startTime) / 1_000_000.0;
 
-                    System.out.println("Linear Skyline Query completed in " + duration_in_ms + " ms");
-                    System.out.println("Total skyline points: " + queryResults.size());
                     System.out.println("Records in skyline:");
 
                     for (Record r : queryResults) {
                         System.out.println(r.toString());
                     }
+                    System.out.println("Linear Skyline Query completed in " + duration_in_ms + " ms");
+                    System.out.println("Total skyline points: " + queryResults.size());
                     System.out.println();
 
                     break;
@@ -244,6 +248,23 @@ public class Main {
                 //      SKYLINE QUERY
                 case "6":
                     System.out.println("Skyline Query using R* Tree Index Selected (WIP)");
+
+                    startTime = System.nanoTime();
+                    queryResults = OptimalSkylineQuery.computeSkyline();
+                    endTime = System.nanoTime();
+
+                    duration_in_ms = (endTime - startTime) / 1_000_000.0;
+
+                    System.out.println("Total skyline points: " + queryResults.size());
+
+                    for (Record r : queryResults) {
+                        System.out.println(r.toString());
+                    }
+                    System.out.println();
+                    System.out.println("Records in skyline:");
+                    System.out.println("Skyline Query using R*Tree index completed in " + duration_in_ms + " ms");
+                    System.out.println();
+
                     break;
 
                 //      OTHER VALUES
