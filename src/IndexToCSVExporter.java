@@ -1,52 +1,54 @@
 import java.io.FileWriter;
-import java.util.ArrayList;
-import java.util.Map;
-import java.util.HashMap;
+import java.io.PrintWriter;
+import java.util.List;
 
 public class IndexToCSVExporter {
 
-    public static void exportMBRsToCSV(String outputPath) {
-        try {
-            FileWriter writer = new FileWriter(outputPath);
-            writer.write("nodeBlockId,nodeLevel,entryIndex,x_min,x_max,y_min,y_max\n");
+    public static void exportMBRsToCSV(String outputFilePath) {
+        try (PrintWriter writer = new PrintWriter(new FileWriter(outputFilePath))) {
+            writer.println("nodeBlockId,isLeaf,dataBlockId,boundingBox");
 
-            Map<Long, Boolean> visited = new HashMap<>();
             Node root = FilesHandler.readIndexFileBlock(RStarTree.getRootNodeBlockId());
-            traverseAndExport(root, visited, writer);
-
-            writer.close();
-            System.out.println("✅ MBRs exported to: " + outputPath);
+            traverseAndExport(root, writer);
+            System.out.println("✅ Export complete: " + outputFilePath);
         } catch (Exception e) {
-            System.err.println("❌ Error exporting MBRs: " + e.getMessage());
             e.printStackTrace();
         }
     }
 
-    private static void traverseAndExport(Node node, Map<Long, Boolean> visited, FileWriter writer) throws Exception {
-        if (node == null || visited.containsKey(node.getNodeBlockId())) return;
-        visited.put(node.getNodeBlockId(), true);
+    private static void traverseAndExport(Node node, PrintWriter writer) {
+        if (node == null) return;
 
-        ArrayList<Entry> entries = node.getEntries();
-        int level = node.getNodeLevelInTree();
+        boolean isLeaf = node.getNodeLevelInTree() == RStarTree.getLeafLevel();
 
-        for (int i = 0; i < entries.size(); i++) {
-            Entry entry = entries.get(i);
+        for (Entry entry : node.getEntries()) {
+            StringBuilder line = new StringBuilder();
+            line.append(node.getNodeBlockId()).append(","); // node id
+            line.append(isLeaf).append(",");
+
+            if (entry instanceof LeafEntry leafEntry) {
+                line.append(leafEntry.getDataBlockId()); // datafile block id
+            } else {
+                line.append(""); // empty for non-leaf
+            }
+            line.append(",");
+
             MBR mbr = entry.getBoundingBox();
-            ArrayList<Bounds> bounds = mbr.getBounds();
+            List<Bounds> bounds = mbr.getBounds();
+            for (int i = 0; i < bounds.size(); i++) {
+                Bounds b = bounds.get(i);
+                line.append(b.getLower()).append("-").append(b.getUpper());
+                if (i < bounds.size() - 1) {
+                    line.append(";");
+                }
+            }
+            writer.println(line);
+            writer.flush();
 
-            double xMin = bounds.get(0).getLower();
-            double xMax = bounds.get(0).getUpper();
-            double yMin = bounds.get(1).getLower();
-            double yMax = bounds.get(1).getUpper();
-
-            writer.write(String.format(
-                    "%d,%d,%d,%.6f,%.6f,%.6f,%.6f\n",
-                    node.getNodeBlockId(), level, i, xMin, xMax, yMin, yMax
-            ));
-
-            if (level > RStarTree.getLeafLevel()) {
+            // recursive traversal
+            if (!isLeaf && entry.getChildNodeBlockId() != -1) {
                 Node child = FilesHandler.readIndexFileBlock(entry.getChildNodeBlockId());
-                traverseAndExport(child, visited, writer);
+                traverseAndExport(child, writer);
             }
         }
     }
