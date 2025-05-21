@@ -28,7 +28,6 @@ public class RStarTree {
             FilesHandler.flushIndexBufferToDisk();
 
             System.out.println("✅ Total levels after insertion: " + totalLevels);
-            printTreeStats();
         }
     }
 

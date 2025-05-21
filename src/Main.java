@@ -57,8 +57,17 @@ public class Main {
             duration_in_ms = (endTime - startTime);
             System.out.println("R*Tree index built in " +duration_in_ms / 1000000.0 + "ms");
         }
-        System.out.println("Datafile Metadata: " + FilesHandler.getDataMetaData());
-        System.out.println("Index Metadata: " + FilesHandler.getIndexMetaData());
+        ArrayList<Integer> dataMetaData = FilesHandler.getDataMetaData();
+        ArrayList<Integer> indexMetaData = FilesHandler.getIndexMetaData();
+
+        System.out.println("Datafile Metadata: [Dimensions: " + dataMetaData.getFirst() +
+                ", Block Size: " + dataMetaData.get(1) +
+                ", Total Blocks in File: " + dataMetaData.get(2)+"]");
+        System.out.println("Index Metadata: [Dimensions: " + indexMetaData.getFirst() +
+                ", Block Size: " + indexMetaData.get(1) +
+                ", Total Blocks in File: " + indexMetaData.get(2)+
+                ", Total Levels in Tree: " + indexMetaData.get(3)+"]");
+        System.out.println();
 
         String selection;
         do {

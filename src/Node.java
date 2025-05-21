@@ -3,7 +3,7 @@ import java.util.ArrayList;
 
 // Class representing a Node of the RStarTree
 class Node implements Serializable {
-    private static final int MAX_ENTRIES = 5; // The maximum entries that a Node can fit based on the file parameters
+    private static final int MAX_ENTRIES = 4; // The maximum entries that a Node can fit based on the file parameters
     private static final int MIN_ENTRIES = (int)(0.5 * MAX_ENTRIES); // Setting m to 50%
     private int level; // The level of the tree that this Node is located
     private long blockId; // The unique ID of the file block that this Node refers to
