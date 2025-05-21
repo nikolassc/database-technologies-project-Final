@@ -131,4 +131,14 @@ class MBR implements Serializable {
         }
         return sqrt(distance);
     }
+
+    // Calculates and returns the sum of the lower bounds in each dimension
+    // Priority metric for the optimal skyline query algorithm
+    public double minSum(){
+        double sum = 0.0;
+        for (Bounds b: this.bounds){
+            sum += b.getLower();
+        }
+        return sum;
+    }
 }
