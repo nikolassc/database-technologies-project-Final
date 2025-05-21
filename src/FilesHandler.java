@@ -270,24 +270,29 @@ class FilesHandler {
 
 
     static void flushIndexBufferToDisk() {
-        try (FileOutputStream fos = new FileOutputStream(PATH_TO_INDEXFILE, false);
-            BufferedOutputStream bos = new BufferedOutputStream(fos)) {
+        try (RandomAccessFile raf = new RandomAccessFile(PATH_TO_INDEXFILE, "rw")) {
             for (Map.Entry<Long, Node> entry : indexBuffer.entrySet()) {
+                long blockId = entry.getKey();
                 Node node = entry.getValue();
                 byte[] nodeInBytes = serialize(node);
                 byte[] lenBytes = ByteBuffer.allocate(4).putInt(nodeInBytes.length).array();
                 byte[] block = new byte[BLOCK_SIZE];
                 System.arraycopy(lenBytes, 0, block, 0, 4);
                 System.arraycopy(nodeInBytes, 0, block, 4, nodeInBytes.length);
-                bos.write(block);
+
+                // Μετακίνηση στο σωστό offset
+                long offset = blockId * BLOCK_SIZE;
+                raf.seek(offset);
+                raf.write(block);
             }
+
             updateMetaDataBlock(PATH_TO_INDEXFILE);
-            bos.flush();
         } catch (Exception e) {
             e.printStackTrace();
         }
         indexBuffer.clear();
     }
+
 
     static void setLevelsOfTreeIndex(int totalLevelsOfTreeIndex) {
         FilesHandler.totalLevelsOfTreeIndex = totalLevelsOfTreeIndex;
