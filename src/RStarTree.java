@@ -1,7 +1,4 @@
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.LinkedList;
-import java.util.Queue;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public class RStarTree {
@@ -11,7 +8,7 @@ public class RStarTree {
     private static final int ROOT_NODE_BLOCK_ID = 1;
     private static final int LEAF_LEVEL = 1;
     private static final int CHOOSE_SUBTREE_LEVEL = 32;
-    private static final int REINSERT_TREE_ENTRIES = (int) (0.2 * Node.getMaxEntriesInNode());
+    private static final int REINSERT_TREE_ENTRIES = (int) (0.3 * Node.getMaxEntriesInNode());
 
     RStarTree(boolean insertFromDataFile) {
         this.totalLevels = FilesHandler.getTotalLevelsFile();
@@ -21,9 +18,8 @@ public class RStarTree {
             for (int i = 1; i < FilesHandler.getTotalBlocksInDataFile(); i++) {
                 ArrayList<Record> records = FilesHandler.readDataFileBlock(i);
                 if (records != null) {
-                    for (Record record : records) {
-                        insertRecord(record, i);
-                    }
+                    insertDataBlock(records,i);
+                    printTreeStats();
                 } else {
                     throw new IllegalStateException("Error reading records from datafile");
                 }
@@ -45,16 +41,14 @@ public class RStarTree {
         return LEAF_LEVEL;
     }
 
-    private void insertRecord(Record record, long datafileBlockId) {
-        ArrayList<Bounds> boundsForDimensions = new ArrayList<>();
-        for (int i = 0; i < FilesHandler.getDataDimensions(); i++) {
-
-            boundsForDimensions.add(new Bounds(record.getCoordinateFromDimension(i), record.getCoordinateFromDimension(i)));
-        }
-
+    private void insertDataBlock(ArrayList<Record> records, long datafileBlockId) {
+        ArrayList<Bounds> boundsList = Bounds.findMinimumBoundsFromRecords(records);
+        MBR blockMBR = new MBR(boundsList);
+        LeafEntry entry = new LeafEntry(datafileBlockId, blockMBR);
         this.levelsInserted = new boolean[totalLevels];
-        insert(null, null, new LeafEntry(record.getRecordID(), datafileBlockId, boundsForDimensions), LEAF_LEVEL);
+        insert(null, null, entry, LEAF_LEVEL);
     }
+
 
     private Entry insert(Node parentNode, Entry parentEntry, Entry dataEntry, int levelToAdd) {
         long nodeBlockId = (parentEntry == null) ? ROOT_NODE_BLOCK_ID : parentEntry.getChildNodeBlockId();
@@ -168,7 +162,6 @@ public class RStarTree {
             FilesHandler.writeNewIndexFileBlock(rightNode);
             parentEntry.adjustBBToFitEntries(childNode.getEntries());
             FilesHandler.updateIndexFileBlock(parentNode, totalLevels);
-            System.out.println("SPLIT at level: " + childNode.getNodeLevelInTree() );
             return new Entry(rightNode);
         }
 
@@ -216,6 +209,39 @@ public class RStarTree {
             insert(null, null, reinsertQueue.poll(), childNode.getNodeLevelInTree());
         }
     }
+
+    public static void printTreeStats() {
+        Node root = FilesHandler.readIndexFileBlock(RStarTree.getRootNodeBlockId());
+        Map<Integer, Integer> levelNodeCounts = new HashMap<>();
+        traverseAndCount(root, levelNodeCounts);
+
+        System.out.println("\n📊 R*-Tree Structure:");
+        levelNodeCounts.entrySet().stream()
+                .sorted(Map.Entry.<Integer, Integer>comparingByKey().reversed())
+                .forEach(entry -> {
+                    int level = entry.getKey();
+                    int count = entry.getValue();
+                    String label = (level == RStarTree.getLeafLevel()) ? "Leaf" :
+                            (level == RStarTree.getRootNodeBlockId()) ? "Root" : "Internal";
+                    System.out.printf("Level %d (%s): %d node(s)%n", level, label, count);
+                });
+    }
+
+    private static void traverseAndCount(Node node, Map<Integer, Integer> levelNodeCounts) {
+        int level = node.getNodeLevelInTree();
+        levelNodeCounts.put(level, levelNodeCounts.getOrDefault(level, 0) + 1);
+
+        // Αν δεν είναι φύλλο, συνέχισε προς τα κάτω
+        if (level > RStarTree.getLeafLevel()) {
+            for (Entry entry : node.getEntries()) {
+                Node child = FilesHandler.readIndexFileBlock(entry.getChildNodeBlockId());
+                if (child != null) {
+                    traverseAndCount(child, levelNodeCounts);
+                }
+            }
+        }
+    }
+
 }
 
 

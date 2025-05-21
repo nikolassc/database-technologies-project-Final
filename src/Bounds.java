@@ -1,5 +1,6 @@
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 
 // Represents the bounds of an interval in a single dimension
@@ -52,4 +53,27 @@ class Bounds implements Serializable {
         }
         return minimumBounds;
     }
+
+    public static ArrayList<Bounds> findMinimumBoundsFromRecords(ArrayList<Record> records) {
+        int dimensions = FilesHandler.getDataDimensions();
+        double[] min = new double[dimensions];
+        double[] max = new double[dimensions];
+        Arrays.fill(min, Double.POSITIVE_INFINITY);
+        Arrays.fill(max, Double.NEGATIVE_INFINITY);
+
+        for (Record r : records) {
+            for (int i = 0; i < dimensions; i++) {
+                double val = r.getCoordinateFromDimension(i);
+                if (val < min[i]) min[i] = val;
+                if (val > max[i]) max[i] = val;
+            }
+        }
+
+        ArrayList<Bounds> bounds = new ArrayList<>();
+        for (int i = 0; i < dimensions; i++) {
+            bounds.add(new Bounds(min[i], max[i]));
+        }
+        return bounds;
+    }
+
 }

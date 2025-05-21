@@ -211,27 +211,6 @@ class FilesHandler {
         return totalLevelsOfTreeIndex;
     }
 
-    static int calculateMaxEntries() {
-        ArrayList<Entry> entriesInNode = new ArrayList<>();
-        int i = 0;
-        final int SAFETY_THRESHOLD = 5000;
-        while (i < SAFETY_THRESHOLD) {
-            ArrayList<Bounds> boundsForEachDimension = new ArrayList<>();
-            for (int j = 0; j < dataDimensions; j++)
-                boundsForEachDimension.add(new Bounds(0.0, 0.0));
-            entriesInNode.add(new LeafEntry(0L, 0L, boundsForEachDimension));
-            i++;
-            try {
-                byte[] nodeInBytes = serialize(new Node(0, entriesInNode));
-                byte[] metaDataLengthInBytes = serialize(entriesInNode.size());
-                if (metaDataLengthInBytes.length + nodeInBytes.length > BLOCK_SIZE) break;
-            } catch (IOException e) {
-                break;
-            }
-        }
-        System.out.println("Total entries in node: " + (i-1));
-        return i - 1;
-    }
 
     static void initializeIndexFile(int dataDimensions, boolean newFile) {
         try {

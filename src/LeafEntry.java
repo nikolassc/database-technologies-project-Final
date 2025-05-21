@@ -4,21 +4,9 @@ import java.util.ArrayList;
 // Extends the Entry Class where it's BoundingBox
 // is the bounding box of the spatial object (the record) indexed
 // also holds the recordId of the record and a pointer of the block which the record is saved in the datafile
-class LeafEntry extends Entry {
-    private long recordId;
-    private long dataFileBlockId; // The id of the block which the record is saved in the datafile
-
-    LeafEntry(long recordId, long dataFileBlockId, ArrayList<Bounds> recordBounds) {
-        super(new MBR(recordBounds));
-        this.recordId = recordId;
-        this.dataFileBlockId = dataFileBlockId;
-    }
-
-    long getRecordId() {
-        return recordId;
-    }
-
-    long getDataFileBlockId() {
-        return dataFileBlockId;
+public class LeafEntry extends Entry {
+    public LeafEntry(long datafileBlockId, MBR mbr) {
+        super(mbr);  // sets bounding box
+        this.setChildNodeBlockId(datafileBlockId);  // sets block pointer
     }
 }
