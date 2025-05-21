@@ -63,7 +63,7 @@ class MBR implements Serializable {
         return sqrt(minDistance);
     }
 
-    public ArrayList<Double> getCenter() {
+    private ArrayList<Double> getCenter() {
         // If center is not yet initialized, find the center and return it
         if (center == null)
         {

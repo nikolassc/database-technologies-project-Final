@@ -46,32 +46,6 @@ class Node implements Serializable {
         return entries;
     }
 
-    public MBR getMBR() {
-        if (entries == null || entries.isEmpty()) return null;
-
-        ArrayList<Bounds> combinedBounds = new ArrayList<>();
-        int dimensions = FilesHandler.getDataDimensions();
-
-        MBR firstMBR = entries.get(0).getBoundingBox();
-        for (int d = 0; d < dimensions; d++) {
-            double lower = firstMBR.getBounds().get(d).getLower();
-            double upper = firstMBR.getBounds().get(d).getUpper();
-            combinedBounds.add(new Bounds(lower, upper));
-        }
-
-        for (int i = 1; i < entries.size(); i++) {
-            MBR current = entries.get(i).getBoundingBox();
-            for (int d = 0; d < dimensions; d++) {
-                Bounds existing = combinedBounds.get(d);
-                double lower = Math.min(existing.getLower(), current.getBounds().get(d).getLower());
-                double upper = Math.max(existing.getUpper(), current.getBounds().get(d).getUpper());
-                combinedBounds.set(d, new Bounds(lower, upper));
-            }
-        }
-
-        return new MBR(combinedBounds);
-    }
-
     // Adds the given entry to the entries ArrayList of the Node
     void insertEntry(Entry entry)
     {

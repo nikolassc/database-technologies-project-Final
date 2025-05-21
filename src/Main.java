@@ -52,7 +52,7 @@ public class Main {
         if(insertRecordsFromDataFile) {
             System.out.println("Building R*Tree index from datafile...");
             startTime = System.nanoTime();
-            new RStarTree(false);
+            new RStarTree(true);
             endTime = System.nanoTime();
             duration_in_ms = (endTime - startTime);
             System.out.println("R*Tree index built in " +duration_in_ms / 1000000.0 + "ms");

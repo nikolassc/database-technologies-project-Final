@@ -10,26 +10,12 @@ public class RStarTree {
     private static final int CHOOSE_SUBTREE_LEVEL = 32;
     private static final int REINSERT_TREE_ENTRIES = (int) (0.3 * Node.getMaxEntriesInNode());
 
-    RStarTree(boolean doBulkLoad) {
+    RStarTree(boolean insertFromDataFile) {
         this.totalLevels = FilesHandler.getTotalLevelsFile();
-        if (doBulkLoad) {
-            ArrayList<Record> allRecords = new ArrayList<>();
-            int totalBlocks = FilesHandler.getTotalBlocksInDataFile();
-
-            for (int i = 1; i <= totalBlocks; i++) {
-                ArrayList<Record> blockRecords = FilesHandler.readDataFileBlock(i);
-                if (blockRecords != null) {
-                    allRecords.addAll(blockRecords);
-                } else {
-                    throw new IllegalStateException("Error reading records from datafile");
-                }
-            }
-
-            bulkLoadFromRecords(allRecords);
-        } else {
+        if (insertFromDataFile) {
             Node root = new Node(1);
             FilesHandler.writeNewIndexFileBlock(root);
-            for (int i = 1; i <= FilesHandler.getTotalBlocksInDataFile(); i++) {
+            for (int i = 1; i < FilesHandler.getTotalBlocksInDataFile(); i++) {
                 ArrayList<Record> records = FilesHandler.readDataFileBlock(i);
                 if (records != null) {
                     insertDataBlock(records,i);
@@ -258,73 +244,12 @@ public class RStarTree {
         }
     }
 
-    private ArrayList<Node> buildLeafNodesSTR(ArrayList<LeafEntry> entries, int M) {
-        entries.sort(Comparator.comparingDouble(e -> e.getBoundingBox().getCenter().get(0)));
-        int sliceCount = (int)Math.ceil(Math.sqrt(entries.size()));
-        int sliceSize = (int)Math.ceil((double) entries.size() / sliceCount);
-
-        ArrayList<Node> leaves = new ArrayList<>();
-        for (int i = 0; i < entries.size(); i += sliceSize) {
-            List<LeafEntry> slice = entries.subList(i, Math.min(i + sliceSize, entries.size()));
-            slice.sort(Comparator.comparingDouble(e -> e.getBoundingBox().getCenter().get(1)));
-            for (int j = 0; j < slice.size(); j += M) {
-                List<LeafEntry> group = slice.subList(j, Math.min(j + M, slice.size()));
-                Node leaf = new Node(LEAF_LEVEL, new ArrayList<>(group));
-                leaf.setNodeBlockId(FilesHandler.getTotalBlocksInIndexFile());
-                FilesHandler.writeNewIndexFileBlock(leaf);
-                leaves.add(leaf);
-            }
-        }
-        return leaves;
-    }
-
-    private Node buildTreeBottomUp(ArrayList<Node> children, int M) {
-        int currentLevel = LEAF_LEVEL;
-        while (children.size() > 1) {
-            ArrayList<Node> newLevelNodes = new ArrayList<>();
-            children.sort(Comparator.comparingDouble(n -> n.getMBR().getCenter().get(0)));
-            int sliceCount = (int)Math.ceil(Math.sqrt(children.size()));
-            int sliceSize = (int)Math.ceil((double) children.size() / sliceCount);
-
-            for (int i = 0; i < children.size(); i += sliceSize) {
-                List<Node> slice = children.subList(i, Math.min(i + sliceSize, children.size()));
-                slice.sort(Comparator.comparingDouble(n -> n.getMBR().getCenter().get(1)));
-                for (int j = 0; j < slice.size(); j += M) {
-                    List<Node> group = slice.subList(j, Math.min(j + M, slice.size()));
-                    ArrayList<Entry> entries = new ArrayList<>();
-                    for (Node child : group) {
-                        entries.add(new Entry(child));
-                    }
-                    Node parent = new Node(currentLevel + 1, entries);
-                    parent.setNodeBlockId(FilesHandler.getTotalBlocksInIndexFile());
-                    FilesHandler.writeNewIndexFileBlock(parent);
-                    newLevelNodes.add(parent);
-                }
-            }
-
-            children = newLevelNodes;
-            currentLevel++;
-        }
-        return children.get(0); // Single root node
-    }
-
-    public void bulkLoadFromRecords(ArrayList<Record> records) {
-        ArrayList<LeafEntry> leafEntries = new ArrayList<>();
-        for (Record record : records) {
-            ArrayList<Bounds> boundsForDimensions = new ArrayList<>();
-            for (int i = 0; i < FilesHandler.getDataDimensions(); i++) {
-                boundsForDimensions.add(new Bounds(record.getCoordinateFromDimension(i), record.getCoordinateFromDimension(i)));
-            }
-            MBR mbr = new MBR(boundsForDimensions);
-            leafEntries.add(new LeafEntry(record.getBlockID(), mbr));
-        }
-        ArrayList<Node> leaves = buildLeafNodesSTR(leafEntries, Node.getMaxEntriesInNode());
-        Node root = buildTreeBottomUp(leaves, Node.getMaxEntriesInNode());
-        root.setNodeBlockId(ROOT_NODE_BLOCK_ID);
-        totalLevels = root.getNodeLevelInTree();
-        FilesHandler.writeNewIndexFileBlock(root);
-    }
 }
+
+
+
+
+
 
 class EntryAreaEnlargementPair implements Comparable {
     private Entry entry; // The Entry object

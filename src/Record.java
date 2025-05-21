@@ -5,7 +5,6 @@ public class Record implements Serializable{
     private long recordID;
     private String name;
     private ArrayList<Double> coor; //coordinates
-    private long blockID;
 
     // The constructor
     public Record(long recordID, String name, ArrayList<Double> coor){
@@ -29,17 +28,10 @@ public class Record implements Serializable{
         }
     }
 
-    public void setBlockID(long blockID) {
-        this.blockID = blockID;
-    }
 
     // Getters
     public long getRecordID(){
         return  recordID;
-    }
-
-    public long getBlockID() {
-        return blockID;
     }
 
     public String getName(){
