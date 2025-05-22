@@ -78,9 +78,9 @@ public class Main {
                     "1) Linear Range Query \n" +
                     "2) Range Query using R* Tree index (WIP)\n" + //@TODO Range Query using Index
                     "3) Linear K-Nearest Neighbors Query\n" +
-                    "4) K-Nearest Neighbors Query using R* Tree Index (WIP)\n"+ //@TODO K-nn Query using Index
+                    "4) K-Nearest Neighbors Query using R* Tree Index\n"+
                     "5) Linear Skyline Query\n" +
-                    "6) Skyline Query using R* Tree Index (WIP)"); //@TODO Skyline Query using Index
+                    "6) Skyline Query using R* Tree Index");
             selection = scanner.nextLine().trim();
             System.out.println();
 
@@ -215,14 +215,13 @@ public class Main {
                     System.out.println("Total points found in range: " + queryResults.size());
 
                     System.out.println();   // Καθαρό newline
-                    System.out.flush();     // Πλήρες flush της κονσόλας
                     break;
 
 
                 //      KNN QUERY
                 case "4":
                     System.out.println("K-Nearest Neighbors Query using R* Tree Index Selected(WIP)");
-                    System.out.println("🔎 Executing Sequential Nearest Neighbours Query...");
+                    System.out.println("🔎 Executing Nearest Neighbours Query...");
                     System.out.print("Enter value for K: ");
                     int k2 = scanner.nextInt();
                     scanner.nextLine(); // <-- Απαραίτητο!
@@ -239,20 +238,18 @@ public class Main {
                     startTime = System.nanoTime();
                     queryResults = NearestNeighboursQuery.getNearestNeighbours(queryPoint2, k2);
                     endTime = System.nanoTime();
-                    for (Record record : queryResults)
-                        System.out.print(record.toString());
 
                     double duration2 = (endTime - startTime) / 1_000_000.0;
-                    System.out.println("K-Nearest Neighbors query completed in " + duration2 + " milliseconds");
-                    System.out.println("Total points found in range: " + queryResults.size());
                     System.out.println("Results:");
 
                     for (Record record : queryResults) {
                         System.out.println(record.toString());
                     }
+                    ;
+                    System.out.println("K-Nearest Neighbors query completed in " + duration2 + " milliseconds");
+                    System.out.println("Total points found in range: " + queryResults.size());
 
                     System.out.println();   // Καθαρό newline
-                    System.out.flush();     // Πλήρες flush της κονσόλας
 
 
                     break;
@@ -290,13 +287,13 @@ public class Main {
                      endTime = System.nanoTime();
                     double durationInMs = (endTime - startTime) / 1_000_000.0;
 
-                    System.out.println("Skyline Query completed in " + durationInMs + " ms");
-                    System.out.println("Total skyline points: " + skylineResults.size());
                     System.out.println("Skyline Records:");
 
                     for (Record r : skylineResults) {
                         System.out.println(r);
                     }
+                    System.out.println("Skyline Query completed in " + durationInMs + " ms");
+                    System.out.println("Total skyline points: " + skylineResults.size());
 
                     System.out.println();
                     break;

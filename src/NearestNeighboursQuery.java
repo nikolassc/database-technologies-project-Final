@@ -11,6 +11,7 @@ class NearestNeighboursQuery extends Query {
     private PriorityQueue<RecordDistancePair> nearestNeighbours; // Using a max heap for the nearest neighbours
 
     NearestNeighboursQuery(ArrayList<Double> searchPoint, int k) {
+        Collections.reverse(searchPoint);
         if (k < 0)
             throw new IllegalArgumentException("Parameter 'k' for the nearest neighbours must be a positive integer.");
         this.searchPoint = searchPoint;
@@ -43,67 +44,74 @@ class NearestNeighboursQuery extends Query {
     // Finds the nearest neighbours by using a branch and bound algorithm
     // with the help of the RStarTree
     private void findNeighbours(Node node) {
-        node.getEntries().sort(new EntryComparator.EntryDistanceFromCenterComparator(node.getEntries(), searchPoint));
-        int i = 0;
-        //if (node.getNodeLevelInTree() != RStarTree.getLeafLevel()) {
-        //while (i < node.getEntries().size() && (nearestNeighbours.size() < k || node.getEntries().get(i).getBoundingBox().findMinDistanceFromPoint(searchPoint) <= searchPointRadius))
-        while (node.getNodeLevelInTree() != RStarTree.getLeafLevel()) {
-            findNeighbours(FilesHandler.readIndexFileBlock(node.getEntries().get(i).getChildNodeBlockId()));
-            i++;
+        PriorityQueue<NodeEntryPair> queue = new PriorityQueue<>(
+                Comparator.comparingDouble(p -> p.entry.getBoundingBox().findMinDistanceFromPoint(searchPoint))
+        );
+
+        for (Entry e : node.getEntries()) {
+            queue.add(new NodeEntryPair(node, e));
         }
-        //}
-        //else {
-            while (i < node.getEntries().size() && (nearestNeighbours.size() < k || node.getEntries().get(i).getBoundingBox().findMinDistanceFromPoint(searchPoint) <= searchPointRadius))
-            {
-                LeafEntry leafEntry = (LeafEntry) node.getEntries().get(i);
+
+        while (!queue.isEmpty()) {
+            NodeEntryPair pair = queue.poll();
+            Entry entry = pair.entry;
+            Node parent = pair.node;
+
+            double minDistance = entry.getBoundingBox().findMinDistanceFromPoint(searchPoint);
+
+            if (nearestNeighbours.size() == k && minDistance >= nearestNeighbours.peek().getDistance()) {
+                break;
+            }
+
+            Node childNode = FilesHandler.readIndexFileBlock(entry.getChildNodeBlockId());
+            if (childNode == null) continue;
+
+            if (childNode.getNodeLevelInTree() == RStarTree.getLeafLevel()){
+                ArrayList<Record> records = FilesHandler.readDataFileBlock(entry.getChildNodeBlockId());
+                if (records != null){
+                    for (Record record : records) {
+                        double distance = calculateEuclideanDistance(record.getCoordinates(), searchPoint);
+                        if (nearestNeighbours.size() < k){
+                            nearestNeighbours.add(new RecordDistancePair(record, distance));
+                        } else if (distance < nearestNeighbours.peek().getDistance()){
+                            nearestNeighbours.poll();
+                            nearestNeighbours.add(new RecordDistancePair(record, distance));
+                        }
+                    }
+                }
+            } else {
+                for(Entry childEntry : childNode.getEntries()){
+                    queue.add(new NodeEntryPair(childNode, childEntry));
+                }
+            }
+        }
                 /*if (nearestNeighbours.size() >= k)
                     nearestNeighbours.poll();
                 double minDistance = leafEntry.getBoundingBox().findMinDistanceFromPoint(searchPoint);
                 nearestNeighbours.add(new RecordDistancePair(FilesHandler.readDataFileBlock(leafEntry.getDataBlockId()), minDistance));
                 searchPointRadius = nearestNeighbours.peek().getDistance();
                 i++;*/
-                for (Record record : FilesHandler.readDataFileBlock(leafEntry.getDataBlockId())) {
-                    double distance = calculateEuclideanDistance(record.getCoordinates(), searchPoint);
-
-                    if (nearestNeighbours.size() < k) {
-                        nearestNeighbours.add(new RecordDistancePair(record, distance));
-                    } else if (distance < nearestNeighbours.peek().getDistance()) {
-                        nearestNeighbours.poll();
-                        nearestNeighbours.add(new RecordDistancePair(record, distance));
-                    }
-                }
             }
-        //}
-    }
 
-    private double calculateEuclideanDistance(ArrayList<Double> a, ArrayList<Double> b) {
-        double sum = 0;
-        for (int i = 0; i < a.size(); i++) {
-            double diff = a.get(i) - b.get(i);
-            sum += diff * diff;
+    private static class NodeEntryPair {
+        Node node;
+        Entry entry;
+        NodeEntryPair(Node node, Entry entry) {
+            this.node = node;
+            this.entry = entry;
         }
-        return Math.sqrt(sum);
-    }
-}
-
-
-
-// Class which is used to hold an id of a record it's distance from a specific item
-class IdDistancePair {
-    private long recordId; // The id of the record
-    private double distanceFromItem; // The distance from an item
-
-    IdDistancePair(long recordId, double distanceFromItem) {
-        this.recordId = recordId;
-        this.distanceFromItem = distanceFromItem;
     }
 
-    long getRecordId() {
-        return recordId;
+    //}
+        private double calculateEuclideanDistance(ArrayList<Double> a, ArrayList<Double> b) {
+            double sum = 0;
+            for (int i = 0; i < a.size(); i++) {
+                double diff = a.get(i) - b.get(i);
+                sum += diff * diff;
+            }
+            return Math.sqrt(sum);
+        }
     }
 
 
-    double getDistanceFromItem() {
-        return distanceFromItem;
-    }
-}
+
