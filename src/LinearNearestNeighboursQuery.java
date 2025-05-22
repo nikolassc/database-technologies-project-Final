@@ -16,7 +16,6 @@ class LinearNearestNeighboursQuery {
     private PriorityQueue<RecordDistancePair> nearestNeighbours;
 
     LinearNearestNeighboursQuery(ArrayList<Double> searchPoint, int k) {
-        Collections.reverse(searchPoint);
         if (k < 0)
             throw new IllegalArgumentException("Parameter 'k' for the nearest neighbours must be a positive integer.");
         this.searchPoint = searchPoint;

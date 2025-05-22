@@ -11,7 +11,6 @@ class NearestNeighboursQuery extends Query {
     private PriorityQueue<RecordDistancePair> nearestNeighbours; // Using a max heap for the nearest neighbours
 
     NearestNeighboursQuery(ArrayList<Double> searchPoint, int k) {
-        Collections.reverse(searchPoint);
         if (k < 0)
             throw new IllegalArgumentException("Parameter 'k' for the nearest neighbours must be a positive integer.");
         this.searchPoint = searchPoint;
@@ -55,13 +54,11 @@ class NearestNeighboursQuery extends Query {
         while (!queue.isEmpty()) {
             NodeEntryPair pair = queue.poll();
             Entry entry = pair.entry;
-            Node parent = pair.node;
 
             double minDistance = entry.getBoundingBox().findMinDistanceFromPoint(searchPoint);
 
-            if (nearestNeighbours.size() == k && minDistance >= nearestNeighbours.peek().getDistance()) {
-                break;
-            }
+            if (nearestNeighbours.size() == k && minDistance >= searchPointRadius) continue;
+
 
             Node childNode = FilesHandler.readIndexFileBlock(entry.getChildNodeBlockId());
             if (childNode == null) continue;
@@ -76,6 +73,11 @@ class NearestNeighboursQuery extends Query {
                         } else if (distance < nearestNeighbours.peek().getDistance()){
                             nearestNeighbours.poll();
                             nearestNeighbours.add(new RecordDistancePair(record, distance));
+                            searchPointRadius = nearestNeighbours.peek().getDistance();
+                        }
+
+                        if (nearestNeighbours.size() == k) {
+                            searchPointRadius = nearestNeighbours.peek().getDistance();
                         }
                     }
                 }

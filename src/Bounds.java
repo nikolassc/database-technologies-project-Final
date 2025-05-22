@@ -76,4 +76,14 @@ class Bounds implements Serializable {
         return bounds;
     }
 
+    public static ArrayList<Bounds> findMinimumBoundsFromRecord(Record record) {
+        ArrayList<Bounds> boundsList = new ArrayList<>();
+        for (int i = 0; i < record.getCoordinates().size(); i++) {
+            double coord = record.getCoordinateFromDimension(i);
+            boundsList.add(new Bounds(coord, coord));
+        }
+        return boundsList;
+    }
+
+
 }

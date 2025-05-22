@@ -76,7 +76,7 @@ public class Main {
             System.out.println("Please select a query you would like to execute: \n" +
                     "0) Exit application \n" +
                     "1) Linear Range Query \n" +
-                    "2) Range Query using R* Tree index (WIP)\n" + //@TODO Range Query using Index
+                    "2) Range Query using R* Tree index (WIP)\n" +
                     "3) Linear K-Nearest Neighbors Query\n" +
                     "4) K-Nearest Neighbors Query using R* Tree Index\n"+
                     "5) Linear Skyline Query\n" +

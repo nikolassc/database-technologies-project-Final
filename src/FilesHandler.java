@@ -125,7 +125,7 @@ class FilesHandler {
         }
     }
 
-    private static void writeDataFileBlock(ArrayList<Record> records) {
+    public static void writeDataFileBlock(ArrayList<Record> records) {
         try {
             byte[] recordInBytes = serialize(records);
             byte[] metaDataLengthInBytes = serialize(recordInBytes.length);
@@ -298,4 +298,58 @@ class FilesHandler {
         FilesHandler.totalLevelsOfTreeIndex = totalLevelsOfTreeIndex;
         updateMetaDataBlock(PATH_TO_INDEXFILE);
     }
+
+    static long appendRecordToDataBlock(Record record) {
+        try {
+            int maxRecords = calculateMaxRecordsInBlock();
+            for (long blockId = 1; blockId < totalBlocksInDataFile; blockId++) {
+                ArrayList<Record> records = readDataFileBlock(blockId);
+                if (records != null && records.size() < maxRecords) {
+                    records.add(record);
+                    overwriteDataFileBlock(blockId, records);
+                    return blockId;
+                }
+            }
+            ArrayList<Record> newBlock = new ArrayList<>();
+            newBlock.add(record);
+            writeDataFileBlock(newBlock);
+            return totalBlocksInDataFile - 1;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return -1;
+        }
+    }
+
+    static boolean deleteRecordFromDataBlock(Record record) {
+        try {
+            for (long blockId = 1; blockId < totalBlocksInDataFile; blockId++) {
+                ArrayList<Record> records = readDataFileBlock(blockId);
+                if (records != null && records.removeIf(r -> r.getRecordID() == record.getRecordID())) {
+                    overwriteDataFileBlock(blockId, records);
+                    return true;
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
+    private static void overwriteDataFileBlock(long blockId, ArrayList<Record> records) throws IOException {
+        byte[] recordInBytes = serialize(records);
+        byte[] metaDataLengthInBytes = serialize(recordInBytes.length);
+        byte[] block = new byte[BLOCK_SIZE];
+
+        if (metaDataLengthInBytes.length + recordInBytes.length > BLOCK_SIZE)
+            throw new IllegalStateException("Block too large to overwrite");
+
+        System.arraycopy(metaDataLengthInBytes, 0, block, 0, metaDataLengthInBytes.length);
+        System.arraycopy(recordInBytes, 0, block, metaDataLengthInBytes.length, recordInBytes.length);
+
+        try (RandomAccessFile raf = new RandomAccessFile(PATH_TO_DATAFILE, "rw")) {
+            raf.seek(blockId * BLOCK_SIZE);
+            raf.write(block);
+        }
+    }
+
 }

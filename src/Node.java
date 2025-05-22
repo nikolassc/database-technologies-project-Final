@@ -34,6 +34,8 @@ class Node implements Serializable {
         return MAX_ENTRIES;
     }
 
+    static int getMinEntriesInNode() {return MIN_ENTRIES;}
+
     long getNodeBlockId() {
         return blockId;
     }
