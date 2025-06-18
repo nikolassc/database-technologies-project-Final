@@ -6,30 +6,87 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+
+/**
+ *
+ * Public Class {@code FilesHandler} that organizes and executes all I/O and File operations in Memory. <p></p> Uses buffer in RAM
+ * that flushes after creation to limit I/O times. <p> All files are serialized to .dat files. All data paths lead to {@code src/resources} directory,
+ * and raw data that is used is accepted in csv format.
+ * <p><p>
+ * {@code datafile}: The serialized Records data from Raw CSV file format TO bytes in .dat <p>
+ * {@code indexfile}: The serialized classes and objects of the R*Tree that points to blocks in the datafile
+ *
+ */
+
+
 class FilesHandler {
-    private static final String DELIMITER = ",";
+    /** Path to the Raw CSV data file in the project */
     private static final String PATH_TO_CSV = "src/resources/data.csv";
+
+    /** Path to the DataFile in the project*/
     static final String PATH_TO_DATAFILE = "src/resources/datafile.dat";
-    static final String PATH_TO_INDEXFILE = "src/resources/indexfile.dat";
+
+    /** Path to the Indexfile in the project */
+    static final String PATH_TO_INDEXFILE = "src/resources/indexfile.dat"; //
+
+    /** Block Size in Memory = 32KB*/
     private static final int BLOCK_SIZE = 32 * 1024;
+
+    /** User given data Dimensions (given csv file is 2 dimensional) */
     private static int dataDimensions;
+
+    /** The total blocks in the datafile, written in metadata block 0 */
     private static int totalBlocksInDataFile;
-    private static int totalBlocksInIndexFile;
+
+    /** The total Blocks in the Indexfile, written in the MetaData Block 0 */
+    private static int totalBlocksInIndexFile; //
+
+    /** The total levels of the tree , written in the MetaData Block 0.*/
     private static int totalLevelsOfTreeIndex;
-    private static final Map<Long, Node> indexBuffer = new LinkedHashMap<>();
+
+    /** Index Buffer of BlockId's and IndexBlocks.*/
+    static Map<Long, IndexBlock> indexBuffer = new LinkedHashMap<>();
+
+    /** The current {@link IndexBlock} that is being written on*/
+    static IndexBlock currentIndexBlock = new IndexBlock();
+
+    /** Writing starts in block 1, block 0 is metadata */
+    static long currentBlockId = 1;
+
+
+    /**
+     * Getter for the CSV filepath.
+     *
+     * @return CSV filepath
+     */
 
 
     static String getPathToCsv() {
         return PATH_TO_CSV;
     }
 
-    static String getDelimiter() {
-        return DELIMITER;
-    }
+
+    /**
+     * Getter for the data dimensions
+     *
+     * @return The data dimensions
+     */
+
 
     static int getDataDimensions() {
         return dataDimensions;
     }
+
+
+    /**
+     * {@code serialize} method that serializes any objects into a {@code ByteArray} using Java's {@link ByteArrayOutputStream}. Used to keep
+     * data in blocks of 32KB
+     *
+     * @param obj An {@link Object}
+     * @return The {@link Object}'s {@code ByteArray}
+     * @throws IOException to catch any IOException errors
+     */
+
 
     private static byte[] serialize(Object obj) throws IOException {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -38,13 +95,40 @@ class FilesHandler {
         return baos.toByteArray();
     }
 
+
+    /**
+     * Getter for the indexFile metadata block
+     *
+     * @return {@link ArrayList} of {@link Integer} describing the index file, in order:<p>
+     * [{@code dataDimensions}, {@code BLOCK_SIZE}, {@code totalBlocksInIndexFile}, {@code totalLevelsOfTreeIndex}]
+     */
+
+
     static ArrayList<Integer> getIndexMetaData() {
         return readMetaDataBlock(PATH_TO_INDEXFILE);
     }
 
+
+    /**
+     * Getter for the data file metadata block
+     *
+     * @return {@link ArrayList} of {@link Integer} describing the datafile, in order:
+     * <p>[{@code dataDimensions}, {@code BLOCK_SIZE}, {@code totalBlocksInDataFile}]
+     */
+
+
     static ArrayList<Integer> getDataMetaData() {
         return readMetaDataBlock(PATH_TO_DATAFILE);
     }
+
+
+    /**
+     * {@code readMetaDataBlock} method reads a file's metadata block
+     *
+     * @param pathToFile The filepath of the file to be read.
+     * @return {@link ArrayList} of {@link Integer} describing the file.
+     */
+
 
     private static ArrayList<Integer> readMetaDataBlock(String pathToFile) {
         try {
@@ -71,6 +155,14 @@ class FilesHandler {
         }
     }
 
+
+    /**
+     * {@code updateMetaDataBlock} method that updates the given file's metadata block with the class's static fields.
+     *
+     * @param pathToFile The filepath of the file to be updated.
+     */
+
+
     private static void updateMetaDataBlock(String pathToFile) {
         try {
             ArrayList<Integer> fileMetaData = new ArrayList<>();
@@ -95,9 +187,32 @@ class FilesHandler {
         }
     }
 
+    //
+    //
+    //
+    //-------------------------------------------DATAFILE METHODS-------------------------------------------------------
+    //
+    //
+    //
+
+
+    /**
+     * Getter for the total number of blocks in the Datafile
+     *
+     * @return The number of blocks in the datafile
+     */
+
+
     static int getTotalBlocksInDataFile() {
         return totalBlocksInDataFile;
     }
+
+
+    /**
+     * Calculates the maximum amount of records that fit in a block of 32KB
+     *
+     * @return The maximum amount of records that fit in a block.
+     */
 
     private static int calculateMaxRecordsInBlock() {
         ArrayList<Record> blockRecords = new ArrayList<>();
@@ -113,9 +228,18 @@ class FilesHandler {
             if (lengthInBytes.length + recordInBytes.length > BLOCK_SIZE)
                 break;
         }
-        System.out.println("Max records in a block: " + (i-1));
         return i - 1;
     }
+
+
+    /**
+     * Helper method for {@link #calculateMaxRecordsInBlock} that returns a serialized object OR if unable to serialize, an empty
+     * byte array
+     *
+     * @param obj An {@link Object} to be serialized.
+     * @return A byte array.
+     */
+
 
     private static byte[] serializeOrEmpty(Object obj) {
         try {
@@ -124,6 +248,14 @@ class FilesHandler {
             return new byte[0];
         }
     }
+
+
+    /**
+     * {@code writeDataFileBlock} method that writes a serialized block in the datafile in memory using {@link BufferedOutputStream}
+     *
+     * @param records The records to be serialized into a block
+     */
+
 
     public static void writeDataFileBlock(ArrayList<Record> records) {
         try {
@@ -145,6 +277,16 @@ class FilesHandler {
             e.printStackTrace();
         }
     }
+
+
+    /**
+     * {@code readDataFileBlock} method that reads a serialized block of {@link Record}, using the blockId as offset to position the
+     * block in the datafile
+     *
+     * @param blockID The blockId offset
+     * @return {@link ArrayList} of deserialized {@link Record}.
+     */
+
 
     static ArrayList<Record> readDataFileBlock(long blockID) {
         try {
@@ -168,6 +310,17 @@ class FilesHandler {
         }
         return null;
     }
+
+
+    /**
+     * {@code initializeDataFile} method that depending on user input, reads the existing datafile's metadata, OR creates a new
+     * datafile by reading the Raw CSV data.
+     *
+     *
+     * @param dataDimensions User inputted dimensions.
+     * @param newDataFile Whether to create a new datafile or not
+     */
+
 
     static void initializeDataFile(int dataDimensions, boolean newDataFile) {
         try {
@@ -203,13 +356,58 @@ class FilesHandler {
         }
     }
 
+    //
+    //
+    //
+    //-------------------------------------------INDEXFILE METHODS------------------------------------------------------
+    //
+    //
+    //
+
+
+    /**
+     * Getter for the total number of blocks in the index File
+     *
+     * @return Total blocks in the index file
+     */
+
+
     static int getTotalBlocksInIndexFile() {
         return totalBlocksInIndexFile;
     }
 
+
+    /**
+     * Getter for the total levels of the R*Tree index
+     *
+     * @return The total levels of the tree index
+     */
+
+
     static int getTotalLevelsFile() {
         return totalLevelsOfTreeIndex;
     }
+
+
+    /**
+     * Setter of the total levels of the R*Tree index
+     * @param totalLevelsOfTreeIndex The new total levels to be set
+     */
+
+
+    static void setLevelsOfTreeIndex(int totalLevelsOfTreeIndex) {
+        FilesHandler.totalLevelsOfTreeIndex = totalLevelsOfTreeIndex;
+        updateMetaDataBlock(PATH_TO_INDEXFILE);
+    }
+
+
+    /**
+     * {@code initializeIndexFile} method that either reads the metadata of the existing indexfile OR creates a new indexfile
+     * and initializes new metadata.
+     *
+     * @param dataDimensions User inputted data dimensions
+     * @param newFile Whether to create new file or not
+     */
 
 
     static void initializeIndexFile(int dataDimensions, boolean newFile) {
@@ -231,111 +429,175 @@ class FilesHandler {
         }
     }
 
+
+    /**
+     * {@code writeNewIndexFileBlock} method checks whether the current {@link IndexBlock} has enough space to write a {@link Node},
+     * and adds it to the {@code indexBuffer}, or
+     * if the new node doesn't fit in the block, it creates a new {@link IndexBlock} in the {@code indexBuffer}, and adds the node
+     * inside it
+     *
+     * @param node The {@link Node} to be added to the {@code indexBuffer}
+     */
+
+
     static void writeNewIndexFileBlock(Node node) {
-        indexBuffer.put(node.getNodeBlockId(), node);
-        totalBlocksInIndexFile++;
-        updateMetaDataBlock(PATH_TO_INDEXFILE);
+        if (!currentIndexBlock.hasSpace()) {
+            indexBuffer.put(currentBlockId, currentIndexBlock);
+            currentBlockId++;
+            currentIndexBlock = new IndexBlock();
+            totalBlocksInIndexFile++;
+        }
+        node.setNodeBlockId(currentBlockId);
+        node.setNodeIndexInBlock(currentIndexBlock.getNodes().size());
+        currentIndexBlock.addNode(node);
+        indexBuffer.put(currentBlockId, currentIndexBlock);
     }
+
+
+    /**
+     * {@code updateIndexFileBlock} updates an {@link IndexBlock}'s {@link Node} in the {@code indexBuffer} with new data.
+     * Firstly checks whether the block exists in the buffer
+     * and if not, it reads directly from the indexfile.
+     *
+     * @param node The node to be updated.
+     * @param totalLevelsOfTreeIndex unused from earlier version
+     */
+
 
     static void updateIndexFileBlock(Node node, int totalLevelsOfTreeIndex) {
-        indexBuffer.put(node.getNodeBlockId(), node);
-        FilesHandler.totalLevelsOfTreeIndex = totalLevelsOfTreeIndex;
+        long blockId = node.getNodeBlockId();
+        int nodeIndex = node.getNodeIndexInBlock();
+
+        IndexBlock indexBlock = indexBuffer.get(blockId);
+        if (indexBlock == null) {
+            indexBlock = readIndexFileBlock(blockId);
+            if (indexBlock == null) {
+                throw new IllegalStateException("Could not read IndexBlock with ID: " + blockId);
+            }
+        }
+
+        // Αντικαθιστούμε το node στο σωστό index
+        indexBlock.getNodes().set(nodeIndex, node);
+        indexBlock.addNode(node);
+        indexBuffer.put(blockId, indexBlock);
     }
 
-    static Node readIndexFileBlock(long blockId) {
-        if (indexBuffer.containsKey(blockId)) return indexBuffer.get(blockId);
-        try {
-            RandomAccessFile raf = new RandomAccessFile(new File(PATH_TO_INDEXFILE), "r");
+
+    /**
+     * {@code readIndexFileBlock} reads an {@link IndexBlock} directly from the indexfile. Rarely used to prevent big I/O times.
+     *
+     * @param blockId The block Id to be used as offset
+     * @return The {@link IndexBlock} in the indexfile
+     */
+
+    static IndexBlock readIndexFileBlock(long blockId) {
+        try (RandomAccessFile raf = new RandomAccessFile(PATH_TO_INDEXFILE, "r")) {
             raf.seek(blockId * BLOCK_SIZE);
             byte[] block = new byte[BLOCK_SIZE];
             if (raf.read(block) != BLOCK_SIZE) throw new IOException();
-
             ByteArrayInputStream bais = new ByteArrayInputStream(block);
-
             byte[] lenBytes = new byte[4];
-            if (bais.read(lenBytes) != 4) throw new IOException("Couldn't read length bytes");
-            int nodeDataLength = ByteBuffer.wrap(lenBytes).getInt();
-
-            byte[] nodeBytes = new byte[nodeDataLength];
-            if (bais.read(nodeBytes) != nodeDataLength) throw new IOException("Couldn't read full node data");
-
-            ObjectInputStream nodeOis = new ObjectInputStream(new ByteArrayInputStream(nodeBytes));
-            return (Node) nodeOis.readObject();
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+            if (bais.read(lenBytes) != 4) throw new IOException();
+            int blockLength = ByteBuffer.wrap(lenBytes).getInt();
+            byte[] blockBytes = new byte[blockLength];
+            if (bais.read(blockBytes) != blockLength) throw new IOException();
+            ObjectInputStream ois = new ObjectInputStream(new ByteArrayInputStream(blockBytes));
+            return (IndexBlock) ois.readObject();
+        } catch (Exception e) { e.printStackTrace(); }
         return null;
     }
 
 
+    /**
+     * {@code flushIndexBufferToDisk} flushes the {@code indexBuffer} to disk memory after every {@link IndexBlock} is added to the buffer.
+     * The IndexBuffer {@link Map}
+     * is serialized in bytes all at once, instead of every {@link IndexBlock} to be serialized every time.
+     * This method drastically reduces I/O times.
+     *
+     */
+
+
     static void flushIndexBufferToDisk() {
         try (RandomAccessFile raf = new RandomAccessFile(PATH_TO_INDEXFILE, "rw")) {
-            for (Map.Entry<Long, Node> entry : indexBuffer.entrySet()) {
+            for (Map.Entry<Long, IndexBlock> entry : indexBuffer.entrySet()) {
                 long blockId = entry.getKey();
-                Node node = entry.getValue();
-                byte[] nodeInBytes = serialize(node);
-                byte[] lenBytes = ByteBuffer.allocate(4).putInt(nodeInBytes.length).array();
-                byte[] block = new byte[BLOCK_SIZE];
-                System.arraycopy(lenBytes, 0, block, 0, 4);
-                System.arraycopy(nodeInBytes, 0, block, 4, nodeInBytes.length);
-
-                // Μετακίνηση στο σωστό offset
-                long offset = blockId * BLOCK_SIZE;
-                raf.seek(offset);
-                raf.write(block);
+                IndexBlock block = entry.getValue();
+                byte[] blockInBytes = serialize(block);
+                byte[] lenBytes = ByteBuffer.allocate(4).putInt(blockInBytes.length).array();
+                byte[] fileBlock = new byte[BLOCK_SIZE];
+                System.arraycopy(lenBytes, 0, fileBlock, 0, 4);
+                System.arraycopy(blockInBytes, 0, fileBlock, 4, blockInBytes.length);
+                raf.seek(blockId * BLOCK_SIZE);
+                raf.write(fileBlock);
             }
-
-            updateMetaDataBlock(PATH_TO_INDEXFILE);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        } catch (Exception e) { e.printStackTrace(); }
         indexBuffer.clear();
     }
 
 
-    static void setLevelsOfTreeIndex(int totalLevelsOfTreeIndex) {
-        FilesHandler.totalLevelsOfTreeIndex = totalLevelsOfTreeIndex;
-        updateMetaDataBlock(PATH_TO_INDEXFILE);
-    }
+    /**
+     * {@code appendRecordToDataBlock} is used in single {@link Record} inserts
+     * <p></p>Appends a {@link Record} to a datafile block if there is enough space, if not enough space,
+     * creates a new block in the datafile.
+     *
+     * @param record The {@link Record} to be added
+     * @return The blockId where the {@link Record} was saved
+     * @throws IOException to catch any IOException errors
+     */
 
-    static long appendRecordToDataBlock(Record record) {
-        try {
-            int maxRecords = calculateMaxRecordsInBlock();
-            for (long blockId = 1; blockId < totalBlocksInDataFile; blockId++) {
-                ArrayList<Record> records = readDataFileBlock(blockId);
-                if (records != null && records.size() < maxRecords) {
-                    records.add(record);
-                    overwriteDataFileBlock(blockId, records);
-                    return blockId;
+
+    public static long appendRecordToDataBlock(Record record) throws IOException {
+        int maxRecords = calculateMaxRecordsInBlock();
+        long lastBlockId = getTotalBlocksInDataFile() - 1; // last block in the datafile
+
+        if (lastBlockId >= 1) {
+            ArrayList<Record> blockRecords = readDataFileBlock(lastBlockId);
+            if (blockRecords != null) {
+                blockRecords.add(record);
+
+                if (canSerializeBlock(blockRecords) && blockRecords.size() <= maxRecords) {
+                    overwriteDataFileBlock(lastBlockId, blockRecords);
+                    return lastBlockId;
                 }
             }
-            ArrayList<Record> newBlock = new ArrayList<>();
-            newBlock.add(record);
-            writeDataFileBlock(newBlock);
-            return totalBlocksInDataFile - 1;
-        } catch (Exception e) {
-            e.printStackTrace();
-            return -1;
         }
+
+        // No space in existing blocks => new block
+        System.out.println("Data block is full, creating new data block...\n\n");
+        ArrayList<Record> newBlock = new ArrayList<>();
+        newBlock.add(record);
+        writeDataFileBlock(newBlock);
+        return getTotalBlocksInDataFile() - 1;
     }
 
-    static boolean deleteRecordFromDataBlock(Record record) {
-        try {
-            for (long blockId = 1; blockId < totalBlocksInDataFile; blockId++) {
-                ArrayList<Record> records = readDataFileBlock(blockId);
-                if (records != null && records.removeIf(r -> r.getRecordID() == record.getRecordID())) {
-                    overwriteDataFileBlock(blockId, records);
-                    return true;
-                }
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return false;
+
+    /**
+     * {@code canSerializeBlock} helper method that checks whether the block with the new {@link Record} can be serialized.
+     *
+     * @param records {@link ArrayList} of {@link Record} to be written in the block
+     * @return Whether the block can be serialized or not
+     * @throws IOException to catch any IOException errors
+     */
+
+
+    private static boolean canSerializeBlock(ArrayList<Record> records) throws IOException {
+        byte[] recordInBytes = serialize(records);
+        byte[] metaDataLengthInBytes = serialize(recordInBytes.length);
+        return (metaDataLengthInBytes.length + recordInBytes.length) <= BLOCK_SIZE;
     }
 
-    private static void overwriteDataFileBlock(long blockId, ArrayList<Record> records) throws IOException {
+
+    /**
+     * {@code overwriteDataFileBlock} overwrites a Block in the datafile. using the blockId as offset, it locates the block and reserializes it
+     * with the new {@link ArrayList} of {@link Record}
+     *
+     * @param blockId The block Id used as offset
+     * @param records {@link ArrayList} of new {@link Record} to be serialized
+     * @throws IOException to catch any IOException errors
+     */
+
+
+    public static void overwriteDataFileBlock(long blockId, ArrayList<Record> records) throws IOException {
         byte[] recordInBytes = serialize(records);
         byte[] metaDataLengthInBytes = serialize(recordInBytes.length);
         byte[] block = new byte[BLOCK_SIZE];
@@ -352,4 +614,28 @@ class FilesHandler {
         }
     }
 
+
+    /**
+     * {@code readNode} reads a {@link Node} using {@code blockIndex} and {@code nodeIndex} to find its position in the {@code indexBuffer}.
+     * If the {@link Node} is NOT in the {@code indexBuffer},
+     * it is read directly through the IndexFile with {@link #readIndexFileBlock}
+     *
+     * @param blockId The Node's Block id
+     * @param nodeIndex The Node's Index in the Block
+     * @return The Node in the indexBlock
+     */
+
+
+    static Node readNode(long blockId, int nodeIndex) {
+        IndexBlock block = indexBuffer.get(blockId);
+        if (block == null) {
+            block = readIndexFileBlock(blockId);
+        }
+        if (block == null) {
+            throw new IllegalStateException("Node-block is null");
+        }
+        return block.getNodes().get(nodeIndex);
+    }
+
 }
+

@@ -9,9 +9,15 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 
+
+/**
+ * Public class {@link OSMtoCSV_SAX} using an SAX parser for bigger files
+ */
+
+
 public class OSMtoCSV_SAX {
     public static void main(String[] args) {
-        String inputFilePath = "src/resources/greece.osm"; // ή αλλάξτε το σε όποιο OSM έχετε
+        String inputFilePath = "src/resources/greece.osm";
         String outputFilePath = "src/resources/data.csv";
 
         try {
@@ -60,7 +66,7 @@ public class OSMtoCSV_SAX {
 
             saxParser.parse(new File(inputFilePath), handler);
             writer.close();
-            System.out.println("✅ CSV file created: " + outputFilePath);
+            System.out.println("CSV file created: " + outputFilePath);
 
         } catch (Exception e) {
             e.printStackTrace();

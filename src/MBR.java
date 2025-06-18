@@ -4,12 +4,25 @@ import java.util.ArrayList;
 import static java.lang.Math.abs;
 import static java.lang.Math.sqrt;
 
-// Represents a bounding box in the n-dimensional space
+
+/**
+ * Public class {@link MBR} represents a minimum bounding rectangle in a n-dimensional space.
+ * <P></P> Works for n dimensions because an {@link ArrayList} of {@link Bounds} for each dimension is stored in the class
+ */
+
+
 class MBR implements Serializable {
-    private ArrayList<Bounds> bounds; // The bounds for each dimension (for each axis)
-    private Double area; // The total area that the BoundingBox covers
-    private Double margin; // The total margin (perimeter) that the BoundingBox takes
-    private ArrayList<Double> center; // Represents te coordinates of the point that represents the center of the bounding box
+    private ArrayList<Bounds> bounds; // The bounds for each dimension
+    private Double area; // The total area that the MBR covers
+    private Double margin; // The MBR's total margin
+    private ArrayList<Double> center; // Represents the coordinates of the center of the MBR
+
+
+    /**
+     * {@link MBR} constructor that takes an {@link ArrayList} of {@link Bounds} as parameter.
+     * @param bounds {@link ArrayList} of {@link Bounds}
+     */
+
 
     MBR(ArrayList<Bounds> bounds) {
         this.bounds = bounds;
@@ -18,36 +31,73 @@ class MBR implements Serializable {
         this.center = getCenter();
     }
 
+
+    /**
+     * Getter for the {@link ArrayList} of {@link Bounds}
+     * @return {@link ArrayList} of {@link Bounds}
+     */
+
+
     ArrayList<Bounds> getBounds() {
         return bounds;
     }
 
+
+    /**
+     * Getter for the {@link MBR}'s {@code area}
+     * @return {@link MBR}'s {@code area}
+     */
+
+
     double getArea() {
-        // If area is not yet initialized, find the area
         if (area == null)
             area = calculateArea();
 
         return area;
     }
 
+
+    /**
+     * Getter for the {@link MBR}'s {@code margin}
+     * @return {@link MBR}'s {@code margin}
+     */
+
+
     double getMargin() {
-        // If margin is not yet initialized, find the margin
         if (margin == null)
             margin = calculateMargin();
 
         return margin;
     }
 
-    // Returns true if the given's point radius overlaps with the bounding box
-    boolean checkOverLapWithPoint(ArrayList<Double> point, double radius){
-        // If the minimum distance from the point is less or equal the point's radius then the bounding box is in the range
-        return findMinDistanceFromPoint(point) <= radius;
+
+    /**
+     * Getter for the {@link MBR}'s {@code center}
+     * @return {@link MBR}'s {@code center}
+     */
+
+
+    public ArrayList<Double> getCenter() {
+        if (center == null)
+        {
+            center = new ArrayList<>();
+
+            for (int d = 0; d < FilesHandler.getDataDimensions(); d++)
+                center.add((bounds.get(d).getUpper()+bounds.get(d).getLower())/2);
+        }
+        return center;
     }
 
-    // Returns the minimum distance between the bounding box and the point
+
+    /**
+     * {@code findMinDistanceFromPoint} method returns the minimum distance between the {@link MBR} and the given {@code point}
+     * @param point The given point
+     * @return The minimum distance
+     */
+
+
     double findMinDistanceFromPoint(ArrayList<Double> point){
         double minDistance = 0;
-        // For every dimension find the minimum distance
         double rd;
         for (int d = 0; d < FilesHandler.getDataDimensions(); d++)
         {
@@ -63,18 +113,13 @@ class MBR implements Serializable {
         return sqrt(minDistance);
     }
 
-    public ArrayList<Double> getCenter() {
-        // If center is not yet initialized, find the center and return it
-        if (center == null)
-        {
-            center = new ArrayList<>();
 
-            for (int d = 0; d < FilesHandler.getDataDimensions(); d++)
-                center.add((bounds.get(d).getUpper()+bounds.get(d).getLower())/2);
-        }
-        return center;
-    }
-    // Calculates and returns the margin (perimeter) of this BoundingBox
+    /**
+     * Calculates and returns the {@link MBR}'s {@code margin}
+     * @return The {@link MBR}'s {@code margin}
+     */
+
+
     private double calculateMargin() {
         double sum = 0;
         for (int d = 0; d < FilesHandler.getDataDimensions(); d++)
@@ -82,7 +127,13 @@ class MBR implements Serializable {
         return sum;
     }
 
-    // Calculates and returns the area of this BoundingBox
+
+    /**
+     * Calculates and returns the {@link MBR}'s {@code area}
+     * @return The {@link MBR}'s {@code area}
+     */
+
+
     private double calculateArea() {
         double productOfEdges = 1;
         for (int d = 0; d < FilesHandler.getDataDimensions(); d++)
@@ -90,9 +141,16 @@ class MBR implements Serializable {
         return abs(productOfEdges);
     }
 
-    // Returns true if the two bounding boxes overlap
+
+    /**
+     * Checks if two given MBRs overlap
+     * @param MBRA The first {@link MBR}
+     * @param MBRB The second {@link MBR}
+     * @return {@code true} if MBRs overlap, else {@code false}
+     */
+
+
     static boolean checkOverlap(MBR MBRA, MBR MBRB) {
-        // For every dimension find the intersection point
         for (int d = 0; d < FilesHandler.getDataDimensions(); d++)
         {
             double overlapD = Math.min(MBRA.getBounds().get(d).getUpper(), MBRB.getBounds().get(d).getUpper())
@@ -104,25 +162,40 @@ class MBR implements Serializable {
         return true;
     }
 
-    // Calculates and returns the overlap value between two bounding boxes
+
+    /**
+     * Calculates and returns the given MBRs {@code overlapValue}
+     * @param MBRA The first {@link MBR}
+     * @param MBRB The second {@link MBR}
+     * @return The two MBRs {@code overlapValue}
+     */
+
+
     static double calculateOverlapValue(MBR MBRA, MBR MBRB) {
         double overlapValue = 1;
-        // For every dimension find the intersection point
         for (int d = 0; d < FilesHandler.getDataDimensions(); d++)
         {
             double overlapD = Math.min(MBRA.getBounds().get(d).getUpper(), MBRB.getBounds().get(d).getUpper())
                     - Math.max(MBRA.getBounds().get(d).getLower(), MBRB.getBounds().get(d).getLower());
 
             if (overlapD <= 0)
-                return 0; // No overlap, return 0
+                return 0;
             else
                 overlapValue = overlapD*overlapValue;
         }
         return overlapValue;
     }
 
-    // Calculates and returns the euclidean distance value between two bounding boxes's centers
-    static double findDistanceBetweenBoundingBoxes(MBR MBRA, MBR MBRB) {
+
+    /**
+     * Calculates and returns the distance between the centers of the two given MBRs
+     * @param MBRA The first {@link MBR}
+     * @param MBRB The second {@link MBR}
+     * @return The distance between the two centers
+     */
+
+
+    static double findDistanceBetweenMBRs(MBR MBRA, MBR MBRB) {
         double distance = 0;
         // For every dimension find the intersection point
         for (int d = 0; d < FilesHandler.getDataDimensions(); d++)
@@ -132,8 +205,14 @@ class MBR implements Serializable {
         return sqrt(distance);
     }
 
-    // Calculates and returns the sum of the lower bounds in each dimension
-    // Priority metric for the optimal skyline query algorithm
+
+    /**
+     * Calculates the sum of the lower {@link Bounds} in each dimension
+     * <p></p> Used as priority metric for {@link OptimalSkylineQuery}
+     * @return The minimum sum
+     */
+
+
     public double minSum(){
         double sum = 0.0;
         for (Bounds b: this.bounds){

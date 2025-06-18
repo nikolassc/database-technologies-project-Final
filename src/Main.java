@@ -1,11 +1,10 @@
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.sql.SQLOutput;
 import java.util.*;
 
 public class Main {
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException {
         boolean filesExist = Files.exists(Paths.get(FilesHandler.PATH_TO_DATAFILE));
         boolean resetFiles = false;
 
@@ -49,11 +48,30 @@ public class Main {
         long startTime;
         long endTime;
 
+
+        RStarTree tree = null;
+
         if(insertRecordsFromDataFile) {
+            System.out.println("Choose the R*-Tree construction method:");
+            System.out.println("1. Incrementally insert records into the R*-Tree (one by one)");
+            System.out.println("2. Bulk Load all records into the R*-Tree (faster initial build)");
+
+            int choice = -1;
+            while (choice != 1 && choice != 2) {
+                System.out.print("Enter your choice (1 or 2): ");
+                try {
+                    choice = Integer.parseInt(scanner.nextLine());
+                } catch (NumberFormatException e) {
+                    System.out.println("Invalid input. Please enter 1 or 2.");
+                }
+            }
+
+            boolean useBulkLoad = (choice != 1);
+
             System.out.println("Building R*Tree index from datafile...");
             System.out.println();
             startTime = System.nanoTime();
-            new RStarTree(false);
+            tree = new RStarTree(useBulkLoad);
             endTime = System.nanoTime();
             duration_in_ms = (endTime - startTime);
             System.out.println();
@@ -61,6 +79,9 @@ public class Main {
         }
         ArrayList<Integer> dataMetaData = FilesHandler.getDataMetaData();
         ArrayList<Integer> indexMetaData = FilesHandler.getIndexMetaData();
+        if(!insertRecordsFromDataFile){
+            tree = new RStarTree(indexMetaData);
+        }
 
         System.out.println("Datafile Metadata: [Dimensions: " + dataMetaData.getFirst() +
                 ", Block Size: " + dataMetaData.get(1) +
@@ -73,14 +94,16 @@ public class Main {
 
         String selection;
         do {
-            System.out.println("Please select a query you would like to execute: \n" +
+            System.out.println("Please select an operation you would like to execute: \n" +
                     "0) Exit application \n" +
                     "1) Linear Range Query \n" +
-                    "2) Range Query using R* Tree index (WIP)\n" +
+                    "2) Range Query using R* Tree index\n" +
                     "3) Linear K-Nearest Neighbors Query\n" +
                     "4) K-Nearest Neighbors Query using R* Tree Index\n"+
                     "5) Linear Skyline Query\n" +
-                    "6) Skyline Query using R* Tree Index");
+                    "6) Skyline Query using R* Tree Index\n"+
+                    "7) Single Record insert\n" +
+                    "8) Single Record delete\n");
             selection = scanner.nextLine().trim();
             System.out.println();
 
@@ -136,13 +159,14 @@ public class Main {
                     System.out.println("Total points found in range: " + queryResults.size());
 
                     System.out.println();
+                    System.out.flush();
 
 
                     break;
 
                 //      RANGE QUERY
                 case "2":
-                    System.out.println("Range Query using R* Tree index Selected(WIP)");
+                    System.out.println("Range Query using R* Tree index Selected");
                     boundsList = new ArrayList<>();
                     dims = FilesHandler.getDataDimensions();
 
@@ -153,6 +177,7 @@ public class Main {
                             System.out.print("Give bounds for dimension " + (i + 1) + " (lower Bound First): ");
                             double lower = scanner.nextDouble();
                             double upper = scanner.nextDouble();
+                            scanner.nextLine();
 
                             if (lower <= upper) {
                                 boundsList.add(new Bounds(lower, upper));
@@ -165,7 +190,7 @@ public class Main {
 
                     queryMBR = new MBR(boundsList);
                     startTime = System.nanoTime();
-                    queryResults = RangeQuery.rangeQuery(FilesHandler.readIndexFileBlock(RStarTree.getRootNodeBlockId()), queryMBR);
+                    queryResults = RangeQuery.rangeQuery(FilesHandler.readNode(RStarTree.getRootNodeBlockId(), 0), queryMBR);
                     endTime = System.nanoTime();
                     duration_in_ms = (endTime - startTime) / 1000000.0;
 
@@ -177,7 +202,6 @@ public class Main {
                     System.out.println("Range Query completed in " + duration_in_ms + " milliseconds");
                     System.out.println("Total points found in range: " + queryResults.size());
                     System.out.println();
-
 
                     break;
 
@@ -195,7 +219,7 @@ public class Main {
                     for (int i = 0; i < dimensions; i++) {
                         System.out.print("Dimension " + (i + 1) + ": ");
                         double val = scanner.nextDouble();
-                        scanner.nextLine(); // <-- Απαραίτητο σε κάθε αριθμό!
+                        scanner.nextLine();
                         queryPoint.add(val);
                     }
 
@@ -214,13 +238,14 @@ public class Main {
                     System.out.println("Linear K-Nearest Neighbors query completed in " + duration + " milliseconds");
                     System.out.println("Total points found in range: " + queryResults.size());
 
-                    System.out.println();   // Καθαρό newline
+                    System.out.println();
+                    scanner.nextLine();
                     break;
 
 
                 //      KNN QUERY
                 case "4":
-                    System.out.println("K-Nearest Neighbors Query using R* Tree Index Selected(WIP)");
+                    System.out.println("K-Nearest Neighbors Query using R* Tree Index Selected");
                     System.out.println("🔎 Executing Nearest Neighbours Query...");
                     System.out.print("Enter value for K: ");
                     int k2 = scanner.nextInt();
@@ -299,6 +324,80 @@ public class Main {
                     break;
 
 
+                //      SINGLE RECORD INSERT
+                case "7":
+                    System.out.println("Single Record Insert Selected");
+                    dims = FilesHandler.getDataDimensions();
+                    ArrayList<Double> newCoords = new ArrayList<>();
+                    System.out.println("Enter coordinates for the new record (you have " + dims + " dimensions):");
+
+                    for (int i = 0; i < dims; i++) {
+                        System.out.print("Dimension " + (i + 1) + ": ");
+                        double val = 0;
+                        try {
+                            val = scanner.nextDouble();
+                            scanner.nextLine();
+                        } catch (Exception e) {
+                            System.out.println("Invalid input for dimension " + (i + 1) + ". Please try again.");
+                            scanner.nextLine(); // Clear invalid input
+                            i--; // Retry this dimension
+                            continue;
+                        }
+                        newCoords.add(val);
+                    }
+
+                    System.out.print("Enter Record ID (must be a unique Long): ");
+                    long recordID = 0;
+                    try {
+                        recordID = scanner.nextLong();
+                        scanner.nextLine();
+                    } catch (Exception e) {
+                        System.out.println("Invalid Record ID. Insert aborted.");
+                        scanner.nextLine();
+                        break;
+                    }
+
+                    System.out.print("Enter Record Name: ");
+                    String recordName = scanner.nextLine().trim();
+                    if (recordName.isEmpty()) {
+                        System.out.println("Record name cannot be empty. Insert aborted.");
+                        break;
+                    }
+
+                    Record newRecord = new Record(recordID, recordName,newCoords);
+
+                    try {
+                        tree.insertSingleRecord(newRecord);
+                    } catch (Exception e) {
+                        System.out.println("Error inserting record: " + e.getMessage());
+                    }
+
+                    System.out.println();
+                    break;
+
+                // SINGLE RECORD DELETE
+                case "8":
+                    System.out.println("Single Record Delete Selected");
+                    System.out.print("Enter the Record ID to delete: ");
+                    long deleteRecordID = 0;
+                    try {
+                        deleteRecordID = scanner.nextLong();
+                        scanner.nextLine();
+                    } catch (Exception e) {
+                        System.out.println("Invalid Record ID. Delete aborted.");
+                        scanner.nextLine();
+                        break;
+                    }
+
+                    try {
+                        assert tree != null;
+                        tree.deleteRecord(deleteRecordID);
+                    } catch (Exception e) {
+                        System.out.println("Error deleting record: " + e.getMessage());
+                    }
+
+                    System.out.println();
+                    break;
 
                 //      OTHER VALUES
                 default:
